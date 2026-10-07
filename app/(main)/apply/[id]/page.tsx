@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { ApplyActions } from "@/components/apply-actions";
 import { MissingJob } from "@/components/missing-job";
+import { PreparingLine } from "@/components/preparing-line";
 import { RefreshWhilePreparing } from "@/components/refresh-preparing";
 import { plainLetter } from "@/lib/letter-plain";
 import { loadStore } from "@/lib/store";
@@ -23,7 +24,7 @@ export default async function ApplyDetailPage({ params }: { params: Promise<{ id
       <p className="mt-2 text-xl">{job.title}</p>
       {pack.state === "preparing" ? (
         <p className="mt-10 max-w-xl font-serif text-3xl leading-snug tracking-tight" aria-busy="true" aria-live="polite">
-          Preparing the letter, how to apply, and a note on the company.
+          <PreparingLine />
         </p>
       ) : null}
       {pack.state === "failed" ? (

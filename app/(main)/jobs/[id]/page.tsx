@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { AddToApply } from "@/components/add-to-apply";
 import { MissingJob } from "@/components/missing-job";
+import { PreparingLine } from "@/components/preparing-line";
 import { salaryLabel } from "@/lib/format";
 import { loadStore } from "@/lib/store";
 
@@ -9,7 +10,7 @@ export default async function JobPage({ params }: { params: Promise<{ id: string
   const store = loadStore();
   const job = store.jobs.find((item) => item.id === id);
   if (!job) return <MissingJob />;
-  const onList = store.applyPacks.some((pack) => pack.jobId === job.id);
+  const pack = store.applyPacks.find((item) => item.jobId === job.id);
   const listing = job.sources.find((source) => source.source === "linkedin") ?? job.sources[0];
   return (
     <article>
@@ -23,10 +24,17 @@ export default async function JobPage({ params }: { params: Promise<{ id: string
         {job.demo ? " · Sample listing" : ""} · {salaryLabel(job)}
       </p>
       <div className="mt-8">
-        {onList ? (
-          <Link href={`/apply/${job.id}`} className="font-serif text-xl text-primary underline decoration-primary/30 underline-offset-8">
-            Open on your apply list
-          </Link>
+        {pack ? (
+          <div>
+            <Link href={`/apply/${job.id}`} className="font-serif text-xl text-primary underline decoration-primary/30 underline-offset-8">
+              Open on your apply list
+            </Link>
+            {pack.state === "preparing" ? (
+              <p className="mt-4 max-w-xl text-sm text-muted-foreground" aria-busy="true" aria-live="polite">
+                <PreparingLine />
+              </p>
+            ) : null}
+          </div>
         ) : (
           <AddToApply jobId={job.id} />
         )}

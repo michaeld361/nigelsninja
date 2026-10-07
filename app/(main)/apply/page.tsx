@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { PreparingLine } from "@/components/preparing-line";
 import { RefreshWhilePreparing } from "@/components/refresh-preparing";
 import { loadStore } from "@/lib/store";
 
@@ -27,12 +28,14 @@ export default function ApplyPage() {
                 <Link href={`/apply/${job.id}`} className="block">
                   <h2 className="font-serif text-3xl tracking-tight">{job.company}</h2>
                   <p className="mt-1 text-lg">{job.title}</p>
-                  <p className="mt-3 text-sm text-muted-foreground" aria-live="polite">
-                    {pack.state === "preparing"
-                      ? "Preparing the letter, how to apply, and a note on the company."
-                      : pack.state === "failed"
-                        ? "This one did not finish."
-                        : "Letter, how to apply, and a company note are ready."}
+                  <p className="mt-3 text-sm text-muted-foreground" aria-live="polite" aria-busy={pack.state === "preparing"}>
+                    {pack.state === "preparing" ? (
+                      <PreparingLine />
+                    ) : pack.state === "failed" ? (
+                      "This one did not finish."
+                    ) : (
+                      "Letter, how to apply, and a company note are ready."
+                    )}
                   </p>
                 </Link>
               </li>
