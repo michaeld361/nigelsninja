@@ -28,7 +28,7 @@ export default function JobsPage() {
       ) : null}
       {jobs.length === 0 ? (
         <p className="mt-16 max-w-xl font-serif text-3xl leading-snug tracking-tight">
-          Nothing new from LinkedIn. When a role is worth your time, it will be here.
+          {linkedinError(run) ?? "Nothing new from LinkedIn. When a role is worth your time, it will be here."}
         </p>
       ) : (
         <ul className="mt-12">
@@ -51,6 +51,16 @@ export default function JobsPage() {
       )}
     </div>
   );
+}
+
+function linkedinError(run: Run | null): string | null {
+  const error = run?.counts.linkedin?.error;
+  if (!error || run.counts.linkedin.demo) return null;
+  let text = error;
+  const secret = process.env.APIFY_TOKEN;
+  if (secret) text = text.split(secret).join("");
+  text = text.replace(/apify_api_[A-Za-z0-9]+/g, "").replace(/\s+/g, " ").trim();
+  return text || "LinkedIn fetch failed.";
 }
 
 function lookLine(run: Run | null): string {
