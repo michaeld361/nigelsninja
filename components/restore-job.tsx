@@ -10,7 +10,7 @@ export function RestoreJob({ jobId }: { jobId: string }) {
     <button
       type="button"
       disabled={pending}
-      className="pill pill-line pill-sm mt-1.5 whitespace-nowrap"
+      className="pill pill-line pill-sm mt-1.5 max-w-full whitespace-normal sm:whitespace-nowrap"
       onClick={() =>
         start(async () => {
           const result = await restoreJob(jobId);

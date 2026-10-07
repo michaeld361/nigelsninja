@@ -20,21 +20,21 @@ export default async function JobPage({ params }: { params: Promise<{ id: string
       <Link href={back} className="eyebrow tracking-[0.12em] hover:text-[#FF6B5B]">
         ← {job.status === "skipped" ? "Skipped" : "Jobs"}
       </Link>
-      <h1 className="display mt-7 text-[clamp(44px,6vw,72px)] leading-[0.98]">{job.title}</h1>
+      <h1 className="display mt-7 text-[clamp(36px,10vw,44px)] leading-[0.98] break-words sm:text-[clamp(44px,6vw,72px)]">{job.title}</h1>
       <div className="mt-3.5 text-[22px]">{job.company}</div>
       <div className="mt-2.5 font-mono text-[11.5px] tracking-[0.02em] text-[rgba(242,241,236,0.55)]">
         {job.location}
         {date ? ` · ${date}` : ""}
         {job.demo ? " · Sample" : ""} · <span className="text-[#F2F1EC]">{salaryLabel(job)}</span>
       </div>
-      <div className="mt-8 flex flex-wrap items-center gap-2.5 border-b border-[#F2F1EC] pb-8">
+      <div className="mt-8 flex flex-wrap items-start gap-x-4 gap-y-3 border-b border-[#F2F1EC] pb-8 sm:items-center">
         {pack ? (
-          <div>
+          <div className="min-w-0 max-w-full">
             <Link href={`/apply/${job.id}`} className="pill pill-sm">
               Open on your apply list
             </Link>
             {pack.state === "preparing" ? (
-              <p className="mt-4 max-w-xl text-[15px] text-[rgba(242,241,236,0.6)]" aria-busy="true" aria-live="polite">
+              <p className="mt-4 max-w-xl overflow-hidden font-mono text-[11px] leading-[1.45] tracking-[0.1em] text-[rgba(242,241,236,0.7)] uppercase" aria-busy="true" aria-live="polite">
                 <PreparingLine />
               </p>
             ) : null}
@@ -47,7 +47,7 @@ export default async function JobPage({ params }: { params: Promise<{ id: string
             href={listing.url}
             target="_blank"
             rel="noreferrer"
-            className="ml-auto font-mono text-[11px] tracking-[0.1em] text-[rgba(242,241,236,0.55)] uppercase no-underline border-b border-[rgba(242,241,236,0.3)] pb-0.5 hover:text-[#FF6B5B]"
+            className="max-w-full border-b border-[rgba(242,241,236,0.3)] pb-0.5 font-mono text-[11px] tracking-[0.1em] break-all text-[rgba(242,241,236,0.55)] uppercase no-underline hover:text-[#FF6B5B] sm:ml-auto sm:break-normal"
           >
             View on LinkedIn ↗
           </a>

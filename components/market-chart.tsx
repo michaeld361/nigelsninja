@@ -28,9 +28,17 @@ export function MarketChart({ points }: { points: MarketPoint[] }) {
           </g>
         ))}
       </svg>
-      <div className="mt-3.5 grid font-mono text-[11px] tracking-[0.02em] text-[rgba(242,241,236,0.55)]" style={{ gridTemplateColumns: `repeat(${points.length}, minmax(0, 1fr))` }}>
+      <div className="mt-3.5 hidden font-mono text-[11px] tracking-[0.02em] text-[rgba(242,241,236,0.55)] sm:grid" style={{ gridTemplateColumns: `repeat(${points.length}, minmax(0, 1fr))` }}>
         {points.map((point) => (
           <div key={point.at} className="text-center">
+            <div className="text-[#F2F1EC]">{point.label}</div>
+            <div className="mt-1">{point.searched} searched</div>
+          </div>
+        ))}
+      </div>
+      <div className="mt-3.5 flex gap-4 overflow-x-auto font-mono text-[11px] tracking-[0.02em] text-[rgba(242,241,236,0.55)] sm:hidden">
+        {points.map((point) => (
+          <div key={point.at} className="min-w-16 shrink-0 text-center">
             <div className="text-[#F2F1EC]">{point.label}</div>
             <div className="mt-1">{point.searched} searched</div>
           </div>

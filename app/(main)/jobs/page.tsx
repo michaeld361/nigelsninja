@@ -29,7 +29,7 @@ export default function JobsPage() {
       <div className="flex flex-wrap items-end justify-between gap-6 border-b border-[#F2F1EC] pb-7">
         <div>
           <div className="eyebrow">Jobs · {londonDayMonth()}</div>
-          <h1 className="display mt-3.5 text-[clamp(64px,9vw,112px)]">{londonWeekday()}</h1>
+          <h1 className="display mt-3.5 text-[clamp(40px,11vw,56px)] break-words sm:text-[clamp(64px,9vw,112px)]">{londonWeekday()}</h1>
         </div>
         <SearchTrigger />
       </div>
@@ -66,19 +66,21 @@ export default function JobsPage() {
           </div>
         ) : (
           jobs.map((job, index) => (
-            <article key={job.id} className="job-row grid grid-cols-1 items-start gap-4 border-b border-[rgba(242,241,236,0.12)] py-[30px] sm:grid-cols-[48px_minmax(0,1fr)_auto] sm:gap-5">
+            <article key={job.id} className="job-row grid grid-cols-[2.75rem_minmax(0,1fr)] items-start gap-x-4 gap-y-3 border-b border-[rgba(242,241,236,0.12)] py-[30px] sm:grid-cols-[48px_minmax(0,1fr)_auto] sm:gap-5">
               <div className="pt-3 font-mono text-xs text-[rgba(242,241,236,0.45)]">{String(index + 1).padStart(2, "0")}</div>
               <div className="min-w-0">
                 <Link
                   href={`/jobs/${job.id}`}
-                  className="font-[family-name:var(--font-bricolage)] text-[30px] leading-[1.1] font-bold tracking-[-0.02em] text-[#F2F1EC] hover:text-[#FF6B5B]"
+                  className="font-[family-name:var(--font-bricolage)] text-[26px] leading-[1.1] font-bold tracking-[-0.02em] break-words text-[#F2F1EC] hover:text-[#FF6B5B] sm:text-[30px]"
                 >
                   {job.title}
                 </Link>
                 <div className="mt-2 text-[19px]">{job.company}</div>
                 <JobFacts job={job} />
               </div>
-              <JobActions jobId={job.id} />
+              <div className="col-start-2 min-w-0 sm:col-start-auto">
+                <JobActions jobId={job.id} />
+              </div>
             </article>
           ))
         )}

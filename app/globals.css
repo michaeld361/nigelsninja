@@ -190,6 +190,8 @@
 .pill {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
   gap: 12px;
   border-radius: 999px;
   border: 1px solid #f2f1ec;
@@ -244,6 +246,15 @@
   gap: 8px;
 }
 
+@media (max-width: 639px) {
+  .pill {
+    max-width: 100%;
+    height: auto;
+    white-space: normal;
+    text-align: center;
+  }
+}
+
 .skip-link {
   background: transparent;
   border: 0;
@@ -277,20 +288,27 @@
 }
 
 .preparing-line {
-  display: inline-block;
+  display: block;
+  width: 100%;
   max-width: 100%;
+  overflow: hidden;
 }
 
 .preparing-line-text {
+  display: block;
+  max-width: 100%;
+  overflow-wrap: break-word;
   animation: preparing-pulse 3.2s ease-in-out infinite;
 }
 
 .preparing-hairline {
   display: block;
+  width: 100%;
   height: 1px;
   margin-top: 0.65rem;
   background: currentColor;
   opacity: 0.35;
+  transform-origin: left center;
   animation: preparing-hairline 4.8s ease-in-out infinite;
 }
 

@@ -15,7 +15,7 @@ export default function SkippedPage() {
       <Link href="/jobs" className="eyebrow tracking-[0.12em] hover:text-[#FF6B5B]">
         ← Jobs
       </Link>
-      <h1 className="display mt-6 text-[clamp(64px,9vw,112px)]">Skipped</h1>
+      <h1 className="display mt-6 text-[clamp(40px,11vw,56px)] sm:text-[clamp(64px,9vw,112px)]">Skipped</h1>
       <p className="mt-7 max-w-[52ch] text-xl leading-[1.45] text-[rgba(242,241,236,0.7)]">
         Roles you have set aside. They stay here if you want another look, and they do not sit on a pipeline.
       </p>
@@ -28,12 +28,12 @@ export default function SkippedPage() {
           jobs.map((job, index) => {
             const date = listingDateShort(job.postedAt);
             return (
-              <article key={job.id} className="grid grid-cols-1 items-start gap-4 border-b border-[rgba(242,241,236,0.12)] py-[30px] sm:grid-cols-[48px_minmax(0,1fr)_auto] sm:gap-5">
+              <article key={job.id} className="grid grid-cols-[2.75rem_minmax(0,1fr)] items-start gap-x-4 gap-y-3 border-b border-[rgba(242,241,236,0.12)] py-[30px] sm:grid-cols-[48px_minmax(0,1fr)_auto] sm:gap-5">
                 <div className="pt-3 font-mono text-xs text-[rgba(242,241,236,0.45)]">{String(index + 1).padStart(2, "0")}</div>
                 <div className="min-w-0">
                   <Link
                     href={`/jobs/${job.id}`}
-                    className="font-[family-name:var(--font-bricolage)] text-[30px] leading-[1.1] font-bold tracking-[-0.02em] text-[rgba(242,241,236,0.6)] hover:text-[#FF6B5B]"
+                    className="font-[family-name:var(--font-bricolage)] text-[26px] leading-[1.1] font-bold tracking-[-0.02em] break-words text-[rgba(242,241,236,0.6)] hover:text-[#FF6B5B] sm:text-[30px]"
                   >
                     {job.title}
                   </Link>
@@ -43,7 +43,9 @@ export default function SkippedPage() {
                     {date ? ` · ${date}` : ""} · {salaryLabel(job)}
                   </div>
                 </div>
-                <RestoreJob jobId={job.id} />
+                <div className="col-start-2 min-w-0 sm:col-start-auto">
+                  <RestoreJob jobId={job.id} />
+                </div>
               </article>
             );
           })

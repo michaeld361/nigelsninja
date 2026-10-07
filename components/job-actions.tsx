@@ -18,11 +18,11 @@ export function JobActions({
   const stacked = layout === "row";
 
   return (
-    <div className={stacked ? "flex flex-col items-end gap-2 pt-1.5" : "flex flex-wrap items-center gap-2.5"}>
+    <div className={stacked ? "flex w-full min-w-0 flex-col items-stretch gap-2 pt-1.5 sm:w-auto sm:items-end" : "flex max-w-full flex-wrap items-center gap-2.5"}>
       <button
         type="button"
         disabled={pending}
-        className={stacked ? "pill pill-sm whitespace-nowrap" : "pill"}
+        className={stacked ? "pill pill-sm max-w-full whitespace-normal sm:whitespace-nowrap" : "pill max-w-full whitespace-normal sm:whitespace-nowrap"}
         onClick={() => {
           setWhich("add");
           start(async () => {

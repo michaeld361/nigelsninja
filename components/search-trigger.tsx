@@ -12,7 +12,7 @@ export function SearchTrigger() {
       type="button"
       disabled={pending}
       aria-busy={pending}
-      className="pill"
+      className="pill max-w-full whitespace-normal sm:whitespace-nowrap"
       onClick={() => {
         start(async () => {
           const result = await runLinkedInSearch();

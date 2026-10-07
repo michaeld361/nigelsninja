@@ -11,7 +11,7 @@ export function LetterSheet({ letter, letterId }: { letter: FormalLetter; letter
     <section>
       <div className="mt-7 flex flex-wrap items-center justify-between gap-3">
         <div className="text-base text-[rgba(242,241,236,0.6)]">Drafted with AI help; reviewed and edited by Nigel.</div>
-        <div className="flex gap-2">
+        <div className="flex max-w-full flex-wrap gap-2">
           <button
             type="button"
             className="pill pill-sm"
@@ -34,7 +34,7 @@ export function LetterSheet({ letter, letterId }: { letter: FormalLetter; letter
           ) : null}
         </div>
       </div>
-      <article className="mt-6 box-border max-w-[640px] border border-[rgba(242,241,236,0.1)] bg-[#16181B] px-[clamp(32px,6vw,64px)] py-[clamp(32px,6vw,64px)] text-[16.5px] leading-[1.55] text-[#F2F1EC]">
+      <article className="mt-6 box-border max-w-[640px] border border-[rgba(242,241,236,0.1)] bg-[#16181B] px-5 py-8 text-[16.5px] leading-[1.55] break-words text-[#F2F1EC] sm:px-[clamp(32px,6vw,64px)] sm:py-[clamp(32px,6vw,64px)]">
         <div className="font-mono text-[11.5px] leading-[1.7] text-[rgba(242,241,236,0.65)]">
           {letter.sender.map((line) => (
             <div key={line}>{line}</div>

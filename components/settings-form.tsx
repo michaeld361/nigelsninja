@@ -16,7 +16,7 @@ export function SettingsForm({ profile, settings, files }: { profile: Profile; s
     <div className="rise space-y-14">
       <div>
         <div className="eyebrow">Profile</div>
-        <h1 className="display mt-3.5 text-[clamp(64px,9vw,112px)]">Settings</h1>
+        <h1 className="display mt-3.5 text-[clamp(40px,11vw,56px)] sm:text-[clamp(64px,9vw,112px)]">Settings</h1>
         <p className="mt-7 max-w-[52ch] text-xl leading-[1.45] text-[rgba(242,241,236,0.7)]">
           {profile.headline}. {profile.addressLines.join(", ")}. {profile.phone}. {profile.email}. A change to the search is picked up on the next LinkedIn look.
         </p>

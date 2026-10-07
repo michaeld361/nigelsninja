@@ -12,7 +12,7 @@ export default function MarketPage() {
   return (
     <div className="rise">
       <div className="eyebrow">Market · {searches} {searches === 1 ? "search" : "searches"}</div>
-      <h1 className="display mt-3.5 text-[clamp(64px,9vw,112px)]">
+      <h1 className="display mt-3.5 text-[clamp(40px,11vw,56px)] sm:text-[clamp(64px,9vw,112px)]">
         What the search <em className="text-[#FF6B5B] italic">actually</em> found
       </h1>
       <p className="mt-7 max-w-[52ch] text-xl leading-[1.45] text-[rgba(242,241,236,0.7)]">
