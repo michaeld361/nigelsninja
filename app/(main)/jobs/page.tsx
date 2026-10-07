@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { JobActions } from "@/components/job-actions";
 import { SearchTrigger } from "@/components/search-trigger";
-import { jobMeta, searchStatusLine } from "@/lib/format";
+import { jobMeta, londonWeekday, searchStatusLine } from "@/lib/format";
 import { loadStore } from "@/lib/store";
 import type { Run } from "@/lib/types";
 import { practisingQualificationReason } from "@/pipeline/prefilter";
@@ -31,9 +31,10 @@ export default function JobsPage() {
         </p>
         <SearchTrigger />
       </div>
-      <h1 className="mt-3 font-serif text-5xl tracking-tight">Jobs</h1>
+      <p className="mt-8 text-sm text-muted-foreground">Jobs</p>
+      <h1 className="mt-2 font-serif text-6xl tracking-tight">{londonWeekday()}</h1>
       <p className="mt-4 max-w-xl text-lg leading-8 text-muted-foreground">
-        LinkedIn roles that match your search. If one is worth applying for, add it. Nothing is sent for you.
+        A few LinkedIn privacy roles that fit the search you set. Add one when you want a letter. You send it yourself.
       </p>
       <p className="mt-6 text-sm">
         <Link href="/skipped" className="text-muted-foreground underline decoration-foreground/20 underline-offset-4">
@@ -42,12 +43,12 @@ export default function JobsPage() {
       </p>
       {sample ? (
         <p className="mt-6 max-w-xl text-sm leading-6 text-muted-foreground">
-          These are sample listings. Apify is not connected, so they are not live LinkedIn vacancies.
+          These are sample listings, so you can see how the page feels. Live LinkedIn roles appear once Apify is connected.
         </p>
       ) : null}
       {jobs.length === 0 ? (
         <p className="mt-16 max-w-xl font-serif text-3xl leading-snug tracking-tight">
-          {linkedinError(run) ?? "Nothing new from LinkedIn. When a role is worth your time, it will be here."}
+          {linkedinError(run) ?? "Nothing new this time. A role that fits will land here, and the next look is already on the clock."}
         </p>
       ) : (
         <ul className="mt-12">

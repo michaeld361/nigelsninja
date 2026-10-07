@@ -39,6 +39,8 @@ yarn-error.log*
 /data/store.json.tmp
 /data/store.lock
 /data/files
+/data/linkedin-schedule.json
+/data/linkedin-schedule.log
 
 # vercel
 .vercel

@@ -2,6 +2,7 @@ import { LETTER_PROMPT_VERSION } from "@/lib/defaults";
 import { loadStore, updateStore } from "@/lib/store";
 import { stripLongDashes, toUkEnglish } from "@/lib/text";
 import type { ApplyContact, ApplyPack, CompanySource, HowToApply, Job, Letter, Settings } from "@/lib/types";
+import { buildSpecAnalysis } from "./spec-analysis";
 import { factCheck } from "./check";
 import { callClaude, callClaudeWithWebSearch, extractJson } from "./llm";
 import { scoreLocal, type ScoreResult } from "./score";
@@ -80,6 +81,7 @@ export async function finishApplyPack(jobId: string): Promise<void> {
         );
     const composed = await compose(job, score, store.settings, store.profile);
     const sections = await researchSections(job);
+    const lookingFor = await buildSpecAnalysis(job, store.profile);
     const letter = toLetter(job, composed.draft, store);
     letter.cvVersion = store.profile.cvVersion || 1;
     updateStore((next) => {
@@ -91,6 +93,7 @@ export async function finishApplyPack(jobId: string): Promise<void> {
       row.contact = sections.contact;
       row.companyNote = sections.companyNote;
       row.companySources = sections.sources;
+      row.lookingFor = lookingFor;
       row.liveResearch = sections.liveResearch;
       row.model = sections.model || composed.model;
       row.error = [composed.notice, sections.notice].filter(Boolean).join(" ") || null;
@@ -454,6 +457,7 @@ export function createPreparingPack(jobId: string): ApplyPack {
     contact: null,
     companyNote: null,
     companySources: [],
+    lookingFor: [],
     liveResearch: false,
     model: "",
     error: null,

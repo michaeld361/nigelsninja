@@ -77,6 +77,10 @@ export function postedLabel(iso: string): string {
   return that;
 }
 
+export function londonWeekday(date = new Date()): string {
+  return new Intl.DateTimeFormat("en-GB", { weekday: "long", timeZone: "Europe/London" }).format(date);
+}
+
 export function searchStatusLine(input: { finishedAt: string | null; searched: number; found: number } | null): string {
   if (!input?.finishedAt) return "No LinkedIn search yet.";
   const listings = input.searched === 1 ? "listing" : "listings";

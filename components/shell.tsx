@@ -7,6 +7,7 @@ import { cn } from "cn";
 
 const sections = [
   { href: "/jobs", label: "Jobs" },
+  { href: "/market", label: "Market" },
   { href: "/apply", label: "Apply list" },
 ];
 
@@ -26,7 +27,7 @@ export function Shell({
         <div className="mx-auto flex max-w-3xl items-end justify-between gap-6 px-5 pt-6 pb-4">
           <div>
             <p className="font-serif text-2xl tracking-tight">Nigel Down</p>
-            <p className="text-sm text-muted-foreground">Data privacy</p>
+            <p className="text-sm text-muted-foreground">His privacy search</p>
           </div>
           <div className="flex items-center gap-4 text-sm">
             <Link href="/settings" className="text-muted-foreground hover:text-foreground">

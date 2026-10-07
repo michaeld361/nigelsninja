@@ -16,7 +16,7 @@ const serif = Newsreader({
 
 export const metadata: Metadata = {
   title: "Nigel Job Search",
-  description: "Daily data privacy roles for Nigel Down, scored and drafted for him to review.",
+  description: "LinkedIn privacy roles for Nigel Down, with a letter when he chooses to apply.",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

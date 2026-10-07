@@ -34,7 +34,7 @@ export function AdminPanel({
       <div>
         <h1 className="font-serif text-3xl tracking-tight">Admin</h1>
         <p className="mt-2 max-w-xl text-sm leading-6 text-muted-foreground">
-          This version looks on LinkedIn. Reed and JSearch stay in the code for a later source. Nigel does not see this page.
+          LinkedIn is the live source. Reed and JSearch are still in the code for later. Nigel does not see this page.
         </p>
       </div>
       <div className="flex flex-wrap gap-2">

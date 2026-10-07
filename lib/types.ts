@@ -261,6 +261,11 @@ export type CompanySource = {
   url: string;
 };
 
+export type SpecPoint = {
+  want: string;
+  show: string;
+};
+
 export type ApplyPack = {
   id: string;
   jobId: string;
@@ -270,6 +275,7 @@ export type ApplyPack = {
   contact: ApplyContact | string | null;
   companyNote: string | null;
   companySources: CompanySource[];
+  lookingFor: SpecPoint[];
   liveResearch: boolean;
   model: string;
   error: string | null;

@@ -11,7 +11,9 @@ import { normaliseRaw } from "../pipeline/normalise";
 import { PRACTISING_QUALIFICATION, practisingQualificationReason, prefilterJob } from "../pipeline/prefilter";
 import { scoreLocal } from "../pipeline/score";
 import { letterBodyForDisplay, recipientLines, suggestedSubject } from "../lib/letter-plain";
+import { historyNote } from "../lib/market";
 import { localSections, parseSectionNotes, settleSections } from "../pipeline/apply-pack";
+import { localSpecAnalysis } from "../pipeline/spec-analysis";
 import type { Job } from "../lib/types";
 import { draftLetterLocal, enforceStyle } from "../pipeline/write";
 import type { RawJob } from "../lib/types";
@@ -104,6 +106,20 @@ test("a long requirement list still finishes the pack sections", () => {
   assert.equal(settled.liveResearch, true);
   assert.match(settled.companyNote, /Everest/);
   assert.equal(settled.contact.none, "No named contact, email, or hiring link is public.");
+});
+
+test("reads a spec as what they want and what Nigel should show", () => {
+  const points = localSpecAnalysis(
+    "Data Protection Officer. You will oversee the privacy programme across global entities and run DPIAs.",
+    "CIPP/E, CIPM and AIGP. DPIAs and privacy by design at MullenLowe.",
+  );
+  assert.ok(points.length >= 3 && points.length <= 4);
+  assert.ok(points.some((point) => /CIPP\/E/.test(point.show)));
+  assert.ok(points.some((point) => /Data Protection Officer|privacy programme|assessments/i.test(point.want)));
+  assert.equal(points.some((point) => point.want === "run DPIAs."), false);
+  const onetrust = localSpecAnalysis("Must have hands-on OneTrust experience.", "CIPP/E only");
+  assert.ok(onetrust.some((point) => /OneTrust/.test(point.want)));
+  assert.equal(historyNote(2), "A short history, 2 searches. The line will mean more as the two-hour looks accumulate.");
 });
 
 test("keeps real senior titles and drops junior ones", () => {

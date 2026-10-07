@@ -13,9 +13,9 @@ export function LoginForm() {
 
   return (
     <div className="mx-auto flex min-h-full w-full max-w-lg flex-col justify-center px-5 py-20">
-      <h1 className="font-serif text-5xl tracking-tight">Nigel.</h1>
+      <h1 className="font-serif text-5xl tracking-tight">Nigel</h1>
       <p className="mt-4 max-w-md text-lg leading-8 text-muted-foreground">
-        LinkedIn roles worth applying for, and a letter when you decide to. Nothing is sent until you send it.
+        Your LinkedIn search, and a letter when a role is worth your time. You are the one who sends it.
       </p>
       <form
         className="mt-12 max-w-md space-y-6 border-t pt-8"

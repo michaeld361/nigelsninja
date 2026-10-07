@@ -37,7 +37,7 @@ export default async function ApplyDetailPage({ params }: { params: Promise<{ id
       ) : null}
       {pack.state === "failed" ? (
         <div className="mt-10 max-w-xl">
-          <p className="font-serif text-3xl leading-snug tracking-tight">This one did not finish.</p>
+          <p className="font-serif text-3xl leading-snug tracking-tight">This letter did not finish.</p>
           {notice ? <p className="mt-3 text-sm text-muted-foreground">{notice}</p> : null}
           <div className="mt-6">
             <ApplyActions jobId={job.id} letterText="" letterId={null} retry />
@@ -48,6 +48,19 @@ export default async function ApplyDetailPage({ params }: { params: Promise<{ id
         <div className="mt-16 max-w-2xl">
           {notice ? <p className="mb-16 text-sm leading-6 text-muted-foreground">{notice}</p> : null}
           <LetterSheet letter={formatted} letterId={letter?.id ?? null} />
+          {pack.lookingFor?.length ? (
+            <section className="mt-28 border-t pt-16">
+              <h2 className="font-serif text-3xl tracking-tight">What they are looking for</h2>
+              <ul className="mt-8 max-w-xl space-y-8">
+                {pack.lookingFor.map((point) => (
+                  <li key={point.want}>
+                    <p className="text-base leading-8">{point.want}</p>
+                    <p className="mt-2 text-base leading-8 text-muted-foreground">{point.show}</p>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          ) : null}
           <section className="mt-28 border-t pt-16">
             <h2 className="font-serif text-3xl tracking-tight">How to apply</h2>
             {guide ? (

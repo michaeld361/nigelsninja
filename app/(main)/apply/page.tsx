@@ -12,11 +12,11 @@ export default function ApplyPage() {
       <RefreshWhilePreparing preparing={preparing} />
       <h1 className="font-serif text-5xl tracking-tight">Apply list</h1>
       <p className="mt-4 max-w-xl text-lg leading-8 text-muted-foreground">
-        Roles you want to apply for. Each one gets a letter, how to apply, a contact, and a note on the company.
+        The roles you have chosen to go for. Open one for the letter, what they want to see, and how to send it.
       </p>
       {packs.length === 0 ? (
         <p className="mt-16 max-w-xl font-serif text-3xl leading-snug tracking-tight">
-          Nothing here yet. When a role is worth applying for, add it from Jobs.
+          Your list is clear. When a role feels right, add it from Jobs and a letter will be drawn up.
         </p>
       ) : (
         <ul className="mt-12">
@@ -32,9 +32,9 @@ export default function ApplyPage() {
                     {pack.state === "preparing" ? (
                       <PreparingLine />
                     ) : pack.state === "failed" ? (
-                      "This one did not finish."
+                      "This letter needs another try."
                     ) : (
-                      "Letter, how to apply, and a company note are ready."
+                      "Letter, spec analysis, and company note are ready."
                     )}
                   </p>
                 </Link>

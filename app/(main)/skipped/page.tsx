@@ -16,10 +16,10 @@ export default function SkippedPage() {
       </Link>
       <h1 className="mt-3 font-serif text-5xl tracking-tight">Skipped</h1>
       <p className="mt-4 max-w-xl text-lg leading-8 text-muted-foreground">
-        Roles you passed over. They stay here if you want another look. Nothing is tracked beyond that.
+        Roles you have set aside. They stay here if you want another look, and they do not sit on a pipeline.
       </p>
       {jobs.length === 0 ? (
-        <p className="mt-16 max-w-xl font-serif text-3xl leading-snug tracking-tight">Nothing skipped yet.</p>
+        <p className="mt-16 max-w-xl font-serif text-3xl leading-snug tracking-tight">You have not set a role aside yet.</p>
       ) : (
         <ul className="mt-12">
           {jobs.map((job) => (
