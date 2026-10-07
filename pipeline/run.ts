@@ -1,0 +1,359 @@
+import { RUN_CAPS } from "@/lib/defaults";
+import { loadStore, updateStore } from "@/lib/store";
+import type { FitAssessment, Job, Letter, Run, Settings, SourceId, Store } from "@/lib/types";
+import { takeCost } from "./llm";
+import { normaliseRaw } from "./normalise";
+import { buildDigest, sendEmail } from "./notify";
+import { prefilterJob } from "./prefilter";
+import { applyRetention, expireListings } from "./retention";
+import { scoreJob, type ScoreResult } from "./score";
+import { searchJSearch } from "./sources/jsearch";
+import { searchLinkedIn } from "./sources/linkedin";
+import { searchReed } from "./sources/reed";
+import type { SourceResult } from "./sources/types";
+import { draftLetter } from "./write";
+
+export const DEFAULT_SOURCES: SourceId[] = ["linkedin"];
+
+const SEARCHERS = {
+  linkedin: searchLinkedIn,
+  reed: searchReed,
+  jsearch: searchJSearch,
+} as const;
+
+export type RunOutcome = { ok: true; run: Run } | { ok: false; message: string };
+
+function monthKey(iso: string): string {
+  return new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/London", year: "numeric", month: "2-digit" }).format(new Date(iso));
+}
+
+function spendThisMonth(store: Store): number {
+  const key = monthKey(new Date().toISOString());
+  return store.runs.filter((run) => run.finishedAt && monthKey(run.startedAt) === key).reduce((sum, run) => sum + run.estimatedCostUsd, 0);
+}
+
+function profileBlock(store: Store): string {
+  return [store.profile.cvText, store.profile.linkedinSummary, store.profile.personalStatement].filter(Boolean).join("\n\n");
+}
+
+function enabledPhrases(settings: Settings): string[] {
+  return settings.tiers.filter((tier) => tier.enabled).flatMap((tier) => tier.phrases);
+}
+
+export async function runPipeline(options: {
+  trigger: "cron" | "manual";
+  by: string;
+  sources?: SourceId[];
+}): Promise<RunOutcome> {
+  const started = new Date();
+  const locked = updateStore((store) => {
+    if (store.runLock && new Date(store.runLock.until).getTime() > Date.now()) return false;
+    store.runLock = { until: new Date(Date.now() + 20 * 60 * 1000).toISOString(), owner: options.by };
+    return true;
+  });
+  if (!locked) return { ok: false, message: "A run is already in progress." };
+
+  try {
+    const snapshot = loadStore();
+    const lookbackHours = snapshot.runs.some((run) => run.finishedAt) ? 24 : 24 * 7;
+    const phrases = enabledPhrases(snapshot.settings);
+    const contractTypes = (Object.keys(snapshot.settings.contractTypes) as (keyof Settings["contractTypes"])[]).filter(
+      (key) => snapshot.settings.contractTypes[key],
+    );
+    const params = {
+      phrases,
+      locations: snapshot.settings.locations,
+      radiusMiles: snapshot.settings.radiusMiles,
+      lookbackHours,
+      contractTypes,
+    };
+    const sourceIds = options.sources ?? DEFAULT_SOURCES;
+    const results: SourceResult[] = [];
+    for (const id of sourceIds) {
+      results.push(await SEARCHERS[id](params));
+    }
+
+    const counts: Run["counts"] = {
+      linkedin: blank(false),
+      reed: blank(false),
+      jsearch: blank(false),
+    };
+    for (const id of sourceIds) counts[id] = blank(false);
+
+    const warnings: string[] = [];
+    const errors: string[] = [];
+    const planned: { job: Job; fit?: ScoreResult; letter?: Letter; raw: { source: SourceId; externalId: string; payload: unknown } }[] = [];
+    const seenKeys = new Set<string>();
+    let scored = 0;
+    let letters = 0;
+    const ceilingHit = spendThisMonth(snapshot) >= snapshot.settings.monthlySpendCeilingUsd;
+    const skipLettersReason = ceilingHit ? "Monthly spend ceiling reached. Scoring continued and letters were skipped." : null;
+
+    const appliedKeys = new Set(snapshot.applications.map((item) => item.applicationKey));
+    for (const job of snapshot.jobs) {
+      if (job.status === "applied") appliedKeys.add(job.applicationKey);
+    }
+    const sourceMerges: { dedupeKey: string; url: string; source: Job["sources"][number] }[] = [];
+
+    const candidates: { result: SourceResult; rawIndex: number }[] = [];
+    for (const result of results) {
+      counts[result.source].fetched = result.fetched;
+      counts[result.source].demo = result.demo;
+      counts[result.source].error = result.error;
+      if (result.error) {
+        errors.push(`${result.source}: ${result.error}`);
+        warnings.push(`${label(result.source)} failed and was skipped. ${result.error}`);
+      } else if (result.fetched === 0) {
+        warnings.push(`${label(result.source)} returned zero results.`);
+      }
+      if (result.demo) warnings.push(`${label(result.source)} used sample listings because its API key is not set.`);
+      result.jobs.forEach((_, index) => candidates.push({ result, rawIndex: index }));
+    }
+
+    const profile = profileBlock(snapshot);
+    for (const item of candidates) {
+      const raw = item.result.jobs[item.rawIndex];
+      const normalised = normaliseRaw(raw, started.toISOString());
+      const existing = snapshot.jobs.find((job) => job.dedupeKey === normalised.dedupeKey);
+      const alreadyPlanned = planned.find((item) => item.job.dedupeKey === normalised.dedupeKey);
+      if (existing || alreadyPlanned || seenKeys.has(normalised.dedupeKey)) {
+        counts[raw.source].duplicates += 1;
+        const link = normalised.sources[0];
+        const target = alreadyPlanned?.job ?? existing;
+        if (target && link && !target.sources.some((current) => current.url === link.url)) {
+          target.sources.push(link);
+          if (existing && !alreadyPlanned) sourceMerges.push({ dedupeKey: existing.dedupeKey, url: link.url, source: link });
+        }
+        continue;
+      }
+      seenKeys.add(normalised.dedupeKey);
+      if (appliedKeys.has(normalised.applicationKey)) {
+        counts[raw.source].alreadyApplied += 1;
+        continue;
+      }
+      const gate = prefilterJob(normalised, snapshot.settings);
+      const id = `job-${raw.source}-${raw.externalId}`;
+      const job: Job = {
+        ...normalised,
+        id,
+        europeRemote: gate.europeRemote,
+        status: gate.keep ? "new" : "filtered",
+        statusChangedAt: started.toISOString(),
+        filteredReason: gate.reason,
+        letterNotes: "",
+        privateNote: "",
+        deadline: null,
+      };
+      if (!gate.keep) {
+        counts[raw.source].filtered += 1;
+        planned.push({ job, raw: { source: raw.source, externalId: raw.externalId, payload: raw } });
+        continue;
+      }
+      if (scored >= RUN_CAPS.scored) {
+        job.status = "filtered";
+        job.filteredReason = "Left unscored because the run hit the 80 job cap";
+        counts[raw.source].filtered += 1;
+        planned.push({ job, raw: { source: raw.source, externalId: raw.externalId, payload: raw } });
+        continue;
+      }
+      const fit = await scoreJob(
+        {
+          title: job.title,
+          company: job.company,
+          location: job.location,
+          workPattern: job.workPattern,
+          europeRemote: job.europeRemote,
+          description: job.descriptionText,
+          salaryMin: job.salaryMin,
+          salaryMax: job.salaryMax,
+          salaryPeriod: job.salaryPeriod,
+          currency: job.currency,
+          contractType: job.contractType,
+        },
+        snapshot.settings,
+        profile,
+      );
+      scored += 1;
+      counts[raw.source].scored += 1;
+      job.status = fit.score >= snapshot.settings.scoreThreshold && !fit.blockers.length ? "new" : "low_fit";
+      if (fit.blockers.length && fit.score >= snapshot.settings.scoreThreshold) job.status = "low_fit";
+      let letter: Letter | undefined;
+      if (job.status === "new" && letters < RUN_CAPS.letters && !skipLettersReason) {
+        const draft = await draftLetter(
+          {
+            company: job.company,
+            title: job.title,
+            location: job.location,
+            contractType: job.contractType,
+            sourceLabel: raw.publisher || raw.source,
+            description: job.descriptionText,
+            letterNotes: "",
+          },
+          fit,
+          snapshot.settings,
+          profile,
+        );
+        letters += 1;
+        counts[raw.source].letters += 1;
+        letter = {
+          id: `letter-${job.id}-1`,
+          jobId: job.id,
+          version: 1,
+          model: draft.model,
+          configuredWritingModel: draft.configuredWritingModel,
+          promptVersion: draft.promptVersion,
+          cvVersion: snapshot.profile.cvVersion,
+          refLine: draft.refLine,
+          salutation: draft.salutation,
+          body: draft.body,
+          signOff: draft.signOff,
+          notesForNigel: draft.notesForNigel,
+          unsupportedClaims: draft.unsupportedClaims,
+          styleIssues: draft.styleIssues,
+          wordCount: draft.wordCount,
+          editedBody: null,
+          disclaimerEnabled: null,
+          state: "draft",
+          origin: "generated",
+          docxPath: null,
+          createdAt: new Date().toISOString(),
+        };
+      }
+      counts[raw.source].new += 1;
+      planned.push({ job, fit, letter, raw: { source: raw.source, externalId: raw.externalId, payload: raw } });
+    }
+
+    const finished = new Date();
+    const worthALook = planned.filter((item) => item.job.status === "new").length;
+    const run: Run = {
+      id: `run-${started.getTime()}`,
+      startedAt: started.toISOString(),
+      finishedAt: finished.toISOString(),
+      trigger: options.trigger,
+      by: options.by,
+      lookbackHours,
+      counts,
+      totals: {
+        fetched: sourceIds.reduce((sum, id) => sum + counts[id].fetched, 0),
+        new: planned.filter((item) => item.job.status !== "filtered").length,
+        filtered: planned.filter((item) => item.job.status === "filtered").length,
+        scored,
+        letters,
+        worthALook,
+      },
+      errors,
+      warnings: [...new Set(warnings)],
+      estimatedCostUsd: takeCost(),
+      lettersSkippedReason: skipLettersReason,
+      digestHtml: null,
+      digestSent: false,
+    };
+
+    const top = planned
+      .filter((item) => item.fit && item.job.status === "new")
+      .sort((a, b) => (b.fit?.score ?? 0) - (a.fit?.score ?? 0))
+      .slice(0, 5)
+      .map((item) => ({ job: item.job, score: item.fit?.score ?? 0 }));
+    run.digestHtml = buildDigest(run, top);
+
+    updateStore((store) => {
+      for (const merge of sourceMerges) {
+        const match = store.jobs.find((job) => job.dedupeKey === merge.dedupeKey);
+        if (match && !match.sources.some((current) => current.url === merge.url)) match.sources.push(merge.source);
+      }
+      for (const item of planned) {
+        const existing = store.jobs.find((job) => job.dedupeKey === item.job.dedupeKey);
+        if (existing) {
+          for (const link of item.job.sources) {
+            if (!existing.sources.some((current) => current.url === link.url)) existing.sources.push(link);
+          }
+          continue;
+        }
+        store.jobs.push(item.job);
+        if (item.fit) {
+          const fit: FitAssessment = {
+            id: `fit-${item.job.id}`,
+            jobId: item.job.id,
+            model: item.fit.model,
+            promptVersion: item.fit.promptVersion,
+            score: item.fit.score,
+            summary: item.fit.summary,
+            matches: item.fit.matches,
+            gaps: item.fit.gaps,
+            blockers: item.fit.blockers,
+            flags: item.fit.flags,
+            seniorityFit: item.fit.seniorityFit,
+            locationFit: item.fit.locationFit,
+            salaryNote: item.fit.salaryNote,
+            createdAt: finished.toISOString(),
+          };
+          store.fitAssessments.push(fit);
+        }
+        if (item.letter) store.letters.push(item.letter);
+        store.rawJobs.push({
+          id: `raw-${item.job.id}`,
+          runId: run.id,
+          source: item.raw.source,
+          externalId: item.raw.externalId,
+          payload: item.raw.payload,
+          storedAt: finished.toISOString(),
+        });
+        store.statusEvents.push({
+          id: `event-${item.job.id}`,
+          jobId: item.job.id,
+          from: null,
+          to: item.job.status,
+          at: finished.toISOString(),
+          by: "pipeline",
+        });
+      }
+      if (snapshot.settings.digestEnabled && process.env.DIGEST_TO) {
+        /* sent below after save, flag set here if we already know */
+      }
+      expireListings(store);
+      applyRetention(store);
+      store.runs.unshift(run);
+      store.runLock = null;
+    });
+
+    if (snapshot.settings.digestEnabled) {
+      const to = process.env.DIGEST_TO || "nigel@nigeldown.com";
+      if (process.env.RESEND_API_KEY) {
+        const sent = await sendEmail(to, `Job search: ${worthALook} worth a look`, run.digestHtml || "");
+        updateStore((store) => {
+          const saved = store.runs.find((item) => item.id === run.id);
+          if (saved) saved.digestSent = sent.sent;
+          if (!sent.sent && sent.error) saved?.warnings.push(`Digest not emailed: ${sent.error}`);
+        });
+        run.digestSent = sent.sent;
+      }
+    }
+    if (errors.length && process.env.RESEND_API_KEY && process.env.ALERT_TO) {
+      await sendEmail(process.env.ALERT_TO, "Job search source warning", `<p>${errors.join("<br>")}</p>`);
+    }
+    return { ok: true, run: loadStore().runs.find((item) => item.id === run.id) || run };
+  } catch (error) {
+    updateStore((store) => {
+      store.runLock = null;
+    });
+    return { ok: false, message: error instanceof Error ? error.message : "Run failed" };
+  }
+}
+
+function blank(demo: boolean): Run["counts"]["linkedin"] {
+  return { fetched: 0, new: 0, filtered: 0, scored: 0, letters: 0, duplicates: 0, alreadyApplied: 0, demo, error: null };
+}
+
+function label(source: SourceId): string {
+  if (source === "reed") return "Reed.co.uk";
+  if (source === "jsearch") return "JSearch";
+  return "LinkedIn";
+}
+
+export function latestFit(store: Store, jobId: string): FitAssessment | undefined {
+  return store.fitAssessments.filter((fit) => fit.jobId === jobId).sort((a, b) => b.createdAt.localeCompare(a.createdAt))[0];
+}
+
+export function latestLetter(store: Store, jobId: string): Letter | undefined {
+  return store.letters.filter((letter) => letter.jobId === jobId).sort((a, b) => b.version - a.version)[0];
+}
