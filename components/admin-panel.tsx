@@ -94,6 +94,7 @@ export function AdminPanel({
           {runs.length === 0 ? (
             <p className="text-[17px] text-[rgba(242,241,236,0.7)]">No runs yet. Look on LinkedIn to fetch live roles. Without a key it uses labelled sample listings.</p>
           ) : (
+            <>
             <div className="flex flex-col md:hidden">
               {runs.map((run) => {
                 const selected = latest?.id === run.id;
@@ -143,6 +144,7 @@ export function AdminPanel({
                 );
               })}
             </div>
+            </>
           )}
           {latest ? (
             <div className="mt-8 bg-[#F2F1EC] p-5 font-mono text-[12.5px] leading-[1.7] break-words text-[#0E0F11] sm:p-7">
