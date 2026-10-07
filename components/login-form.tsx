@@ -66,7 +66,7 @@ export function LoginForm({ today }: { today: string }) {
           {error ? <p className="text-sm leading-6 text-[#B3261E]">{error}</p> : null}
           {message ? <p className="text-sm leading-6 text-[rgba(242,241,236,0.72)]">{message}</p> : null}
           {link ? (
-            <a href={link} className="font-[family-name:var(--font-display)] text-4xl font-bold tracking-tight text-[#F2F1EC] underline decoration-[rgba(242,241,236,0.3)] underline-offset-8">
+            <a href={link} className="font-[family-name:var(--font-bricolage)] text-4xl font-bold tracking-tight text-[#F2F1EC] underline decoration-[rgba(242,241,236,0.3)] underline-offset-8">
               Sign in
             </a>
           ) : null}

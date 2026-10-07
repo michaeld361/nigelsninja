@@ -34,7 +34,7 @@ export function SettingsForm({ profile, settings, files }: { profile: Profile; s
           });
         }}
       >
-        <h2 className="font-[family-name:var(--font-display)] text-2xl font-bold tracking-[-0.01em]">CV, version {profile.cvVersion || "none"}</h2>
+        <h2 className="font-[family-name:var(--font-bricolage)] text-2xl font-bold tracking-[-0.01em]">CV, version {profile.cvVersion || "none"}</h2>
         <p className="text-sm text-muted-foreground">Upload a replacement .docx under 5 MB. Letters record which version they used. Earlier text stays in the history.</p>
         <Input name="cv" type="file" accept=".docx,.pdf" />
         <button type="submit" disabled={pending} className="pill pill-sm">
@@ -65,7 +65,7 @@ export function SettingsForm({ profile, settings, files }: { profile: Profile; s
         }}
       >
         <section className="space-y-3 border-t border-[#F2F1EC] pt-6">
-          <h2 className="font-[family-name:var(--font-display)] text-2xl font-bold tracking-[-0.01em]">Profile text</h2>
+          <h2 className="font-[family-name:var(--font-bricolage)] text-2xl font-bold tracking-[-0.01em]">Profile text</h2>
           <label className="block text-sm">
             LinkedIn summary
             <Textarea name="linkedin" className="mt-1 min-h-40" defaultValue={profile.linkedinSummary} />
@@ -77,7 +77,7 @@ export function SettingsForm({ profile, settings, files }: { profile: Profile; s
         </section>
 
         <section className="space-y-4 border-t border-[#F2F1EC] pt-6">
-          <h2 className="font-[family-name:var(--font-display)] text-2xl font-bold tracking-[-0.01em]">Search</h2>
+          <h2 className="font-[family-name:var(--font-bricolage)] text-2xl font-bold tracking-[-0.01em]">Search</h2>
           {settings.tiers.map((tier) => (
             <div key={tier.id} className="space-y-2">
               <label className="flex items-center gap-2 text-sm">
@@ -113,7 +113,7 @@ export function SettingsForm({ profile, settings, files }: { profile: Profile; s
         </section>
 
         <section className="space-y-3 border-t border-[#F2F1EC] pt-6">
-          <h2 className="font-[family-name:var(--font-display)] text-2xl font-bold tracking-[-0.01em]">Letters</h2>
+          <h2 className="font-[family-name:var(--font-bricolage)] text-2xl font-bold tracking-[-0.01em]">Letters</h2>
           <label className="block text-sm">
             Standing notes, applied to every letter
             <Textarea name="standing" className="mt-1 min-h-28" defaultValue={settings.standingNotes} />
@@ -142,7 +142,7 @@ export function SettingsForm({ profile, settings, files }: { profile: Profile; s
       </form>
 
       <section className="space-y-2 border-t border-[#F2F1EC] pt-6">
-        <h2 className="font-[family-name:var(--font-display)] text-2xl font-bold tracking-[-0.01em]">Certificates</h2>
+        <h2 className="font-[family-name:var(--font-bricolage)] text-2xl font-bold tracking-[-0.01em]">Certificates</h2>
         <p className="text-sm text-muted-foreground">CIPP/E, CIPM and AIGP scans, stored so you can attach them when a form asks for proof.</p>
         <ul className="text-sm">
           {files.filter((file) => file.kind === "certificate").map((file) => (
@@ -155,7 +155,7 @@ export function SettingsForm({ profile, settings, files }: { profile: Profile; s
       </section>
 
       <section className="space-y-3 border-t border-[#F2F1EC] pt-6">
-        <h2 className="font-[family-name:var(--font-display)] text-2xl font-bold tracking-[-0.01em]">Session and data</h2>
+        <h2 className="font-[family-name:var(--font-bricolage)] text-2xl font-bold tracking-[-0.01em]">Session and data</h2>
         <form
           onSubmit={(event) => {
             event.preventDefault();

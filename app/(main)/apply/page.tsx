@@ -17,7 +17,7 @@ export default function ApplyPage() {
       </p>
       <div className="mt-12 border-t border-[#F2F1EC]">
         {packs.length === 0 ? (
-          <div className="py-14 font-[family-name:var(--font-display)] text-[28px] font-bold text-[rgba(242,241,236,0.5)] italic">
+          <div className="py-14 font-[family-name:var(--font-bricolage)] text-[28px] font-bold text-[rgba(242,241,236,0.5)] italic">
             Your list is clear. When a role feels right, add it from Jobs and a letter will be drawn up.
           </div>
         ) : (
@@ -33,7 +33,7 @@ export default function ApplyPage() {
               >
                 <div className="font-mono text-xs text-[rgba(242,241,236,0.45)]">{String(index + 1).padStart(2, "0")}</div>
                 <div className="min-w-0">
-                  <div className="font-[family-name:var(--font-display)] text-[40px] leading-none font-bold tracking-[-0.02em]">{job.company}</div>
+                  <div className="font-[family-name:var(--font-bricolage)] text-[40px] leading-none font-bold tracking-[-0.02em]">{job.company}</div>
                   <div className="mt-2 text-lg text-[#F2F1EC]">{job.title}</div>
                 </div>
                 <div className="flex items-center gap-2.5 font-mono text-[11px] tracking-[0.1em] text-[#F2F1EC] uppercase" aria-live="polite" aria-busy={pack.state === "preparing"}>

@@ -27,7 +27,7 @@ export function Shell({
       <aside className="box-border flex flex-col justify-between gap-10 border-b border-[rgba(242,241,236,0.1)] px-6 py-6 md:sticky md:top-0 md:h-screen md:border-r md:border-b-0 md:px-8 md:py-10">
         <div className="flex flex-col gap-8 md:gap-11">
           <Link href="/jobs">
-            <div className="font-[family-name:var(--font-display)] text-[34px] leading-none font-bold tracking-[-0.02em]">
+            <div className="font-[family-name:var(--font-bricolage)] text-[34px] leading-none font-bold tracking-[-0.02em]">
               nigelsninja<span className="text-[#FF6B5B]">.</span>
             </div>
             <div className="mt-2.5 font-mono text-[10px] tracking-[0.14em] text-[rgba(242,241,236,0.5)] uppercase">His privacy search</div>
@@ -39,7 +39,7 @@ export function Shell({
                 <Link
                   key={item.href}
                   href={item.href}
-                  className="flex items-baseline justify-between gap-3 border-b border-[rgba(242,241,236,0.08)] py-2.5 text-left font-[family-name:var(--font-display)] text-xl leading-none font-bold tracking-[-0.01em] whitespace-nowrap transition-colors hover:text-[#FF6B5B] md:py-2.5"
+                  className="flex items-baseline justify-between gap-3 border-b border-[rgba(242,241,236,0.08)] py-2.5 text-left font-[family-name:var(--font-bricolage)] text-xl leading-none font-bold tracking-[-0.01em] whitespace-nowrap transition-colors hover:text-[#FF6B5B] md:py-2.5"
                   style={{ color: active ? "#F2F1EC" : "rgba(242,241,236,.45)" }}
                 >
                   <span>{item.label}</span>

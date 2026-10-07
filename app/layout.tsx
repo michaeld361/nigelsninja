@@ -5,18 +5,22 @@ import { ThemeProvider } from "@/components/theme-provider";
 import "./globals.css";
 
 const sans = Hanken_Grotesk({
-  variable: "--font-sans",
   subsets: ["latin"],
+  style: ["normal", "italic"],
+  variable: "--font-hanken",
 });
 
 const display = Bricolage_Grotesque({
-  variable: "--font-display",
   subsets: ["latin"],
+  display: "swap",
+  adjustFontFallback: false,
+  preload: true,
+  variable: "--font-bricolage",
 });
 
 const mono = Geist_Mono({
-  variable: "--font-geist-mono",
   subsets: ["latin"],
+  variable: "--font-geist",
 });
 
 export const metadata: Metadata = {
@@ -27,7 +31,8 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en-GB" className={`${sans.variable} ${display.variable} ${mono.variable} h-full antialiased`} suppressHydrationWarning>
-      <body className="min-h-full bg-[#0E0F11] font-sans text-[#F2F1EC]">
+      <body className="min-h-full bg-[#0E0F11] text-[#F2F1EC]">
+        <style>{`html[lang]{--font-bricolage:"Bricolage Grotesque";--font-hanken:"Hanken Grotesk";--font-geist:"Geist Mono"}`}</style>
         <ThemeProvider>
           {children}
           <Toaster />

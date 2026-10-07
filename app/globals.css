@@ -7,10 +7,10 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-sans), "Hanken Grotesk", sans-serif;
-  --font-mono: var(--font-geist-mono), "Geist Mono", ui-monospace, monospace;
-  --font-heading: var(--font-display), "Bricolage Grotesque", sans-serif;
-  --font-serif: var(--font-display), "Bricolage Grotesque", sans-serif;
+  --font-sans: var(--font-hanken), sans-serif;
+  --font-mono: var(--font-geist), ui-monospace, monospace;
+  --font-heading: var(--font-bricolage), sans-serif;
+  --font-serif: var(--font-bricolage), sans-serif;
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -136,6 +136,26 @@
   textarea {
     font-family: inherit;
   }
+  .display {
+    font-family: var(--font-bricolage), var(--font-bricolage);
+    font-weight: 700;
+    font-synthesis: style;
+    letter-spacing: -0.03em;
+    line-height: 0.9;
+  }
+  .display em,
+  .display i {
+    font-family: var(--font-bricolage), var(--font-bricolage);
+    font-style: italic;
+    font-synthesis: style;
+  }
+  .eyebrow {
+    font-family: var(--font-geist), ui-monospace, monospace;
+    font-size: 11px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: rgba(242, 241, 236, 0.5);
+  }
 }
 
 @keyframes fade {
@@ -240,20 +260,6 @@
   text-decoration-color: #f2f1ec;
 }
 
-.eyebrow {
-  font-family: var(--font-mono), ui-monospace, monospace;
-  font-size: 11px;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  color: rgba(242, 241, 236, 0.5);
-}
-
-.display {
-  font-family: var(--font-display), "Bricolage Grotesque", sans-serif;
-  font-weight: 700;
-  letter-spacing: -0.03em;
-  line-height: 0.9;
-}
 
 .job-row {
   transition: padding 0.25s ease;

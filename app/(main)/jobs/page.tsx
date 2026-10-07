@@ -61,7 +61,7 @@ export default function JobsPage() {
       {error ? <p className="mt-6 max-w-[52ch] text-[15px] leading-6 text-[#B3261E]">{error}</p> : null}
       <div className="mt-12 border-t border-[rgba(242,241,236,0.12)]">
         {jobs.length === 0 ? (
-          <div className="py-14 font-[family-name:var(--font-display)] text-[28px] font-bold text-[rgba(242,241,236,0.5)] italic">
+          <div className="py-14 font-[family-name:var(--font-bricolage)] text-[28px] font-bold text-[rgba(242,241,236,0.5)] italic">
             Nothing left to look at today.
           </div>
         ) : (
@@ -71,7 +71,7 @@ export default function JobsPage() {
               <div className="min-w-0">
                 <Link
                   href={`/jobs/${job.id}`}
-                  className="font-[family-name:var(--font-display)] text-[30px] leading-[1.1] font-bold tracking-[-0.02em] text-[#F2F1EC] hover:text-[#FF6B5B]"
+                  className="font-[family-name:var(--font-bricolage)] text-[30px] leading-[1.1] font-bold tracking-[-0.02em] text-[#F2F1EC] hover:text-[#FF6B5B]"
                 >
                   {job.title}
                 </Link>

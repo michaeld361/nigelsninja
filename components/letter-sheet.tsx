@@ -59,7 +59,7 @@ export function LetterSheet({ letter, letterId }: { letter: FormalLetter; letter
           ))}
         </div>
         <div className="mt-7">{letter.signOff}</div>
-        <div className="mt-5 font-[family-name:var(--font-display)] text-[28px] font-bold">{letter.signature}</div>
+        <div className="mt-5 font-[family-name:var(--font-bricolage)] text-[28px] font-bold">{letter.signature}</div>
         {letter.disclaimer ? <div className="mt-9 text-[12.5px] leading-[1.5] text-[rgba(242,241,236,0.5)]">{letter.disclaimer}</div> : null}
       </article>
     </section>

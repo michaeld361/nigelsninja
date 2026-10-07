@@ -21,7 +21,7 @@ export default function SkippedPage() {
       </p>
       <div className="mt-12 border-t border-[#F2F1EC]">
         {jobs.length === 0 ? (
-          <div className="py-14 font-[family-name:var(--font-display)] text-[28px] font-bold text-[rgba(242,241,236,0.5)] italic">
+          <div className="py-14 font-[family-name:var(--font-bricolage)] text-[28px] font-bold text-[rgba(242,241,236,0.5)] italic">
             You have not set a role aside yet.
           </div>
         ) : (
@@ -33,7 +33,7 @@ export default function SkippedPage() {
                 <div className="min-w-0">
                   <Link
                     href={`/jobs/${job.id}`}
-                    className="font-[family-name:var(--font-display)] text-[30px] leading-[1.1] font-bold tracking-[-0.02em] text-[rgba(242,241,236,0.6)] hover:text-[#FF6B5B]"
+                    className="font-[family-name:var(--font-bricolage)] text-[30px] leading-[1.1] font-bold tracking-[-0.02em] text-[rgba(242,241,236,0.6)] hover:text-[#FF6B5B]"
                   >
                     {job.title}
                   </Link>

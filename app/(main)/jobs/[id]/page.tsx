@@ -57,7 +57,7 @@ export default async function JobPage({ params }: { params: Promise<{ id: string
         {blocks.map((block, index) => {
           if (block.kind === "head") {
             return (
-              <h3 key={index} className="mt-9 mb-3 font-[family-name:var(--font-display)] text-[28px] font-bold tracking-[-0.01em]">
+              <h3 key={index} className="mt-9 mb-3 font-[family-name:var(--font-bricolage)] text-[28px] font-bold tracking-[-0.01em]">
                 {block.text}
               </h3>
             );

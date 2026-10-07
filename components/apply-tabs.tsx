@@ -63,7 +63,7 @@ export function ApplyTabs({
               <div key={point.want} className="grid grid-cols-[48px_minmax(0,1fr)] gap-5 border-b border-[rgba(242,241,236,0.12)] py-[26px]">
                 <div className="pt-1.5 font-mono text-xs text-[rgba(242,241,236,0.45)]">{String(index + 1).padStart(2, "0")}</div>
                 <div>
-                  <div className="font-[family-name:var(--font-display)] text-[27px] leading-[1.15] font-bold tracking-[-0.01em]">{point.want}</div>
+                  <div className="font-[family-name:var(--font-bricolage)] text-[27px] leading-[1.15] font-bold tracking-[-0.01em]">{point.want}</div>
                   <p className="mt-2.5 max-w-[60ch] text-[17.5px] leading-[1.5] text-[rgba(242,241,236,0.7)]">{point.show}</p>
                 </div>
               </div>

@@ -60,10 +60,10 @@ export function AdminPanel({
       </div>
 
       <section className="mt-14 grid grid-cols-1 items-start gap-8 border-t border-[#F2F1EC] pt-6 md:grid-cols-[minmax(140px,180px)_minmax(0,1fr)]">
-        <h2 className="font-[family-name:var(--font-display)] text-2xl leading-[1.1] font-bold tracking-[-0.01em]">Spend</h2>
+        <h2 className="font-[family-name:var(--font-bricolage)] text-2xl leading-[1.1] font-bold tracking-[-0.01em]">Spend</h2>
         <div>
           <div className="flex items-baseline gap-3">
-            <span className="font-[family-name:var(--font-display)] text-[56px] leading-none font-bold tracking-[-0.02em]">${spend.toFixed(2)}</span>
+            <span className="font-[family-name:var(--font-bricolage)] text-[56px] leading-none font-bold tracking-[-0.02em]">${spend.toFixed(2)}</span>
             <span className="font-mono text-xs text-[rgba(242,241,236,0.55)]">of ${ceiling.toFixed(0)} ceiling this month</span>
           </div>
           <div className="mt-4 h-1 overflow-hidden rounded-sm bg-[rgba(242,241,236,0.08)]">
@@ -74,7 +74,7 @@ export function AdminPanel({
       </section>
 
       <section className="mt-14 grid grid-cols-1 items-start gap-8 border-t border-[#F2F1EC] pt-6 md:grid-cols-[minmax(140px,180px)_minmax(0,1fr)]">
-        <h2 className="font-[family-name:var(--font-display)] text-2xl leading-[1.1] font-bold tracking-[-0.01em]">Keys</h2>
+        <h2 className="font-[family-name:var(--font-bricolage)] text-2xl leading-[1.1] font-bold tracking-[-0.01em]">Keys</h2>
         <div className="grid grid-cols-1 gap-x-8 sm:grid-cols-2">
           {keys.map((key) => (
             <div key={key.name} className="flex items-center justify-between border-b border-[rgba(242,241,236,0.1)] py-3 font-mono text-xs">
@@ -89,7 +89,7 @@ export function AdminPanel({
       </section>
 
       <section className="mt-14 grid grid-cols-1 items-start gap-8 border-t border-[#F2F1EC] pt-6 md:grid-cols-[minmax(140px,180px)_minmax(0,1fr)]">
-        <h2 className="font-[family-name:var(--font-display)] text-2xl leading-[1.1] font-bold tracking-[-0.01em]">Runs</h2>
+        <h2 className="font-[family-name:var(--font-bricolage)] text-2xl leading-[1.1] font-bold tracking-[-0.01em]">Runs</h2>
         <div>
           {runs.length === 0 ? (
             <p className="text-[17px] text-[rgba(242,241,236,0.7)]">No runs yet. Look on LinkedIn to fetch live roles. Without a key it uses labelled sample listings.</p>

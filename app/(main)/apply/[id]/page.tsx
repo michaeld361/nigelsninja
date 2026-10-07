@@ -32,13 +32,13 @@ export default async function ApplyDetailPage({ params }: { params: Promise<{ id
       <div className="mt-3 text-[22px]">{job.title}</div>
       {notice && pack.state !== "failed" ? <p className="mt-6 max-w-xl text-sm leading-6 text-[rgba(242,241,236,0.6)]">{notice}</p> : null}
       {pack.state === "preparing" ? (
-        <p className="mt-10 max-w-xl font-[family-name:var(--font-display)] text-[28px] leading-snug font-bold" aria-busy="true" aria-live="polite">
+        <p className="mt-10 max-w-xl font-[family-name:var(--font-bricolage)] text-[28px] leading-snug font-bold" aria-busy="true" aria-live="polite">
           <PreparingLine />
         </p>
       ) : null}
       {pack.state === "failed" ? (
         <div className="mt-10 max-w-xl">
-          <p className="font-[family-name:var(--font-display)] text-[28px] leading-snug font-bold">This letter did not finish.</p>
+          <p className="font-[family-name:var(--font-bricolage)] text-[28px] leading-snug font-bold">This letter did not finish.</p>
           {notice ? <p className="mt-3 text-sm text-[rgba(242,241,236,0.6)]">{notice}</p> : null}
           <div className="mt-6">
             <ApplyActions jobId={job.id} letterText="" letterId={null} retry />
