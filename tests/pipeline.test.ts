@@ -4,10 +4,11 @@ import os from "node:os";
 import path from "node:path";
 import test from "node:test";
 import { defaultSettings } from "../lib/defaults";
+import { searchStatusLine } from "../lib/format";
 import { styleCheck } from "../lib/style-check";
 import { applicationKey, dedupeKey } from "../lib/text";
 import { normaliseRaw } from "../pipeline/normalise";
-import { prefilterJob } from "../pipeline/prefilter";
+import { PRACTISING_QUALIFICATION, practisingQualificationReason, prefilterJob } from "../pipeline/prefilter";
 import { scoreLocal } from "../pipeline/score";
 import { letterBodyForDisplay, recipientLines, suggestedSubject } from "../lib/letter-plain";
 import { localSections, settleSections } from "../pipeline/apply-pack";
@@ -85,6 +86,54 @@ test("keeps real senior titles and drops junior ones", () => {
     assert.equal(result.keep, false, title);
     assert.match(result.reason || "", new RegExp(word));
   }
+});
+
+test("states the last LinkedIn search in one London line", () => {
+  assert.equal(
+    searchStatusLine({ finishedAt: "2026-10-07T11:35:21.480Z", searched: 34, found: 7 }),
+    "7 October 2026 at 12:35 London time. 34 listings searched, 7 roles found.",
+  );
+  assert.equal(searchStatusLine(null), "No LinkedIn search yet.");
+  assert.equal(
+    searchStatusLine({ finishedAt: "2026-10-07T11:35:21.480Z", searched: 1, found: 1 }),
+    "7 October 2026 at 12:35 London time. 1 listing searched, 1 role found.",
+  );
+});
+
+test("drops roles that require a practising lawyer and keeps ones that work with lawyers", () => {
+  assert.equal(practisingQualificationReason("Privacy Operations Lead / Senior Counsel", "You will partner with the business."), PRACTISING_QUALIFICATION);
+  assert.equal(
+    practisingQualificationReason("Head of Privacy", "You must be a qualified lawyer with a current practising certificate."),
+    PRACTISING_QUALIFICATION,
+  );
+  assert.equal(
+    practisingQualificationReason("Head of Privacy", "Admission to the roll is essential."),
+    PRACTISING_QUALIFICATION,
+  );
+  assert.equal(
+    practisingQualificationReason("Compliance Manager", "Working closely with our Head of Compliance and our General Counsel."),
+    null,
+  );
+  assert.equal(
+    practisingQualificationReason("Data Protection Officer", "Partner with external legal counsel on supplier contracts."),
+    null,
+  );
+  assert.equal(
+    practisingQualificationReason("Data Protection Manager", "A legal qualification is desirable, not essential."),
+    null,
+  );
+  const gated = prefilterJob(
+    {
+      title: "Head of Privacy",
+      location: "London",
+      workPattern: "hybrid",
+      contractType: "permanent",
+      description: "Qualified solicitor required.",
+    },
+    settings,
+  );
+  assert.equal(gated.keep, false);
+  assert.equal(gated.reason, PRACTISING_QUALIFICATION);
 });
 
 test("drops on-site Leeds and flags Europe remote", () => {
@@ -218,8 +267,9 @@ test("a second run does not duplicate jobs or resurface an applied role", async 
   assert.equal(after.jobs.some((job) => /puregym/i.test(job.company)), false);
   const linklaters = after.jobs.find((job) => job.company === "Linklaters");
   assert.ok(linklaters);
-  const fit = after.fitAssessments.find((item) => item.jobId === linklaters?.id);
-  assert.ok(fit && fit.score <= 40 && fit.blockers.length > 0);
+  assert.equal(linklaters.status, "filtered");
+  assert.equal(linklaters.filteredReason, PRACTISING_QUALIFICATION);
+  assert.equal(after.fitAssessments.some((item) => item.jobId === linklaters.id), false);
   const generated = after.letters.filter((letter) => letter.origin === "generated");
   assert.ok(generated.length >= 5);
   for (const letter of generated) {

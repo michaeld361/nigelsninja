@@ -1,8 +1,12 @@
 import Link from "next/link";
 import { JobActions } from "@/components/job-actions";
-import { jobMeta } from "@/lib/format";
+import { SearchTrigger } from "@/components/search-trigger";
+import { jobMeta, searchStatusLine } from "@/lib/format";
 import { loadStore } from "@/lib/store";
 import type { Run } from "@/lib/types";
+import { practisingQualificationReason } from "@/pipeline/prefilter";
+
+export const maxDuration = 300;
 
 export default function JobsPage() {
   const store = loadStore();
@@ -10,13 +14,23 @@ export default function JobsPage() {
   const live = Boolean(process.env.APIFY_TOKEN);
   const jobs = store.jobs
     .filter((job) => job.status === "new" && job.sources.some((source) => source.source === "linkedin") && !listed.has(job.id))
+    .filter((job) => !practisingQualificationReason(job.title, job.descriptionText))
     .filter((job) => (live ? !job.demo : true))
     .sort((a, b) => b.postedAt.localeCompare(a.postedAt));
   const run = store.runs.find((item) => item.finishedAt) ?? null;
   const sample = !live && jobs.some((job) => job.demo);
   return (
     <div>
-      <p className="text-sm text-muted-foreground">{lookLine(run)}</p>
+      <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-3">
+        <p className="text-sm text-muted-foreground">
+          {searchStatusLine(
+            run?.finishedAt
+              ? { finishedAt: run.finishedAt, searched: run.counts.linkedin?.fetched ?? 0, found: run.totals.worthALook }
+              : null,
+          )}
+        </p>
+        <SearchTrigger />
+      </div>
       <h1 className="mt-3 font-serif text-5xl tracking-tight">Jobs</h1>
       <p className="mt-4 max-w-xl text-lg leading-8 text-muted-foreground">
         LinkedIn roles that match your search. If one is worth applying for, add it. Nothing is sent for you.
@@ -65,14 +79,3 @@ function linkedinError(run: Run | null): string | null {
   return text || "LinkedIn fetch failed.";
 }
 
-function lookLine(run: Run | null): string {
-  if (!run?.finishedAt) return "No look at LinkedIn yet.";
-  const clock = new Intl.DateTimeFormat("en-GB", {
-    hour: "2-digit",
-    minute: "2-digit",
-    hourCycle: "h23",
-    timeZone: "Europe/London",
-  }).format(new Date(run.finishedAt));
-  const fetched = run.counts.linkedin?.fetched ?? run.totals.fetched;
-  return `Last look at ${clock}. ${fetched} from LinkedIn.`;
-}

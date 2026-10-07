@@ -188,6 +188,7 @@ export type SourceCounts = {
   letters: number;
   duplicates: number;
   alreadyApplied: number;
+  practisingQualification: number;
   demo: boolean;
   error: string | null;
 };

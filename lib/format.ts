@@ -1,4 +1,4 @@
-import { formatLongDate, formatMoney } from "./text";
+import { formatClock, formatLongDate, formatMoney } from "./text";
 import type { ContractType, Job, JobStatus, SourceId, WorkPattern } from "./types";
 
 export const STATUS_LABEL: Record<JobStatus, string> = {
@@ -75,6 +75,13 @@ export function postedLabel(iso: string): string {
   const that = formatLongDate(date);
   if (today === that) return "Today";
   return that;
+}
+
+export function searchStatusLine(input: { finishedAt: string | null; searched: number; found: number } | null): string {
+  if (!input?.finishedAt) return "No LinkedIn search yet.";
+  const listings = input.searched === 1 ? "listing" : "listings";
+  const roles = input.found === 1 ? "role" : "roles";
+  return `${formatLongDate(input.finishedAt)} at ${formatClock(input.finishedAt)} London time. ${input.searched} ${listings} searched, ${input.found} ${roles} found.`;
 }
 
 export function runSummary(run: { finishedAt: string | null; totals: { fetched: number; new: number; worthALook: number } } | null): string {

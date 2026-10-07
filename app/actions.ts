@@ -344,6 +344,24 @@ export async function deleteAllData(formData: FormData): Promise<ActionResult> {
   return { ok: true, message: "Your data has been deleted. The allow-list is unchanged." };
 }
 
+function publicError(message: string): string {
+  let text = message;
+  for (const secret of [process.env.APIFY_TOKEN, process.env.ANTHROPIC_API_KEY, process.env.RESEND_API_KEY]) {
+    if (secret) text = text.split(secret).join("");
+  }
+  text = text.replace(/apify_api_[A-Za-z0-9]+/g, "").replace(/sk-ant-[A-Za-z0-9_-]+/g, "").replace(/\s+/g, " ").trim();
+  return text || "LinkedIn search failed.";
+}
+
+export async function runLinkedInSearch(): Promise<ActionResult> {
+  const session = await actor();
+  if (!session) return { ok: false, message: "Sign in again." };
+  const result = await runPipeline({ trigger: "manual", by: session.email, sources: ["linkedin"] });
+  revalidatePath("/jobs");
+  if (!result.ok) return { ok: false, message: publicError(result.message) };
+  return { ok: true };
+}
+
 export async function runNow(source?: "linkedin" | "reed" | "jsearch"): Promise<ActionResult> {
   const session = await actor();
   if (!session || session.role !== "admin") return { ok: false, message: "Only Michael can run the pipeline." };
@@ -351,7 +369,7 @@ export async function runNow(source?: "linkedin" | "reed" | "jsearch"): Promise<
   revalidatePath("/admin");
   revalidatePath("/today");
   revalidatePath("/pipeline");
-  if (!result.ok) return result;
+  if (!result.ok) return { ok: false, message: publicError(result.message) };
   return { ok: true, message: `Run finished. ${result.run.totals.worthALook} worth a look.` };
 }
 

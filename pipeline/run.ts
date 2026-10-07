@@ -4,7 +4,7 @@ import type { FitAssessment, Job, Letter, Run, Settings, SourceId, Store } from 
 import { takeCost } from "./llm";
 import { normaliseRaw } from "./normalise";
 import { buildDigest, sendEmail } from "./notify";
-import { prefilterJob } from "./prefilter";
+import { PRACTISING_QUALIFICATION, prefilterJob } from "./prefilter";
 import { applyRetention, expireListings } from "./retention";
 import { scoreJob, type ScoreResult } from "./score";
 import { searchJSearch } from "./sources/jsearch";
@@ -131,7 +131,7 @@ export async function runPipeline(options: {
         counts[raw.source].alreadyApplied += 1;
         continue;
       }
-      const gate = prefilterJob(normalised, snapshot.settings);
+      const gate = prefilterJob({ ...normalised, description: normalised.descriptionText }, snapshot.settings);
       const id = `job-${raw.source}-${raw.externalId}`;
       const job: Job = {
         ...normalised,
@@ -146,6 +146,7 @@ export async function runPipeline(options: {
       };
       if (!gate.keep) {
         counts[raw.source].filtered += 1;
+        if (gate.reason === PRACTISING_QUALIFICATION) counts[raw.source].practisingQualification += 1;
         planned.push({ job, raw: { source: raw.source, externalId: raw.externalId, payload: raw } });
         continue;
       }
@@ -341,7 +342,7 @@ export async function runPipeline(options: {
 }
 
 function blank(demo: boolean): Run["counts"]["linkedin"] {
-  return { fetched: 0, new: 0, filtered: 0, scored: 0, letters: 0, duplicates: 0, alreadyApplied: 0, demo, error: null };
+  return { fetched: 0, new: 0, filtered: 0, scored: 0, letters: 0, duplicates: 0, alreadyApplied: 0, practisingQualification: 0, demo, error: null };
 }
 
 function label(source: SourceId): string {
