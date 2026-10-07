@@ -17,9 +17,11 @@ const SourceSchema = z
   .union([z.object({ label: z.string().optional(), url: z.string() }), z.string()])
   .transform((item) => (typeof item === "string" ? { label: item, url: item } : { label: item.label || item.url, url: item.url }));
 
+const ASK_LIMIT = 20;
+
 const SectionsSchema = z.object({
   steps: z.array(z.string().min(4)).min(2).max(6),
-  asks: z.array(z.string().min(2)).max(8).optional(),
+  asks: z.array(z.string().min(2)).max(ASK_LIMIT).optional(),
   contact_name: z.string().nullable().optional(),
   contact_email: z.string().nullable().optional(),
   contact_link: z.string().nullable().optional(),
@@ -214,15 +216,40 @@ export async function researchSections(job: Job): Promise<SectionDraft> {
     });
     const parsed = await readSections(text, model);
     return settleSections(parsed, job, `${job.descriptionText}\n${evidence}`, searched, model);
-  } catch (error) {
-    const message = error instanceof Error ? error.message : "error";
-    return { ...fallback, notice: `Live lookup did not finish (${message.slice(0, 240)}).` };
+  } catch {
+    return { ...fallback, notice: "Live lookup did not finish, so these sections use the listing on file." };
   }
+}
+
+export function parseSectionNotes(value: unknown): z.infer<typeof SectionsSchema> {
+  return SectionsSchema.parse(normaliseSectionPayload(value));
+}
+
+function normaliseSectionPayload(value: unknown): unknown {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return value;
+  const row = { ...(value as Record<string, unknown>) };
+  if (Array.isArray(row.asks)) {
+    row.asks = row.asks
+      .filter((item): item is string => typeof item === "string")
+      .map((item) => item.trim())
+      .filter((item) => item.length >= 2)
+      .slice(0, ASK_LIMIT);
+  }
+  if (Array.isArray(row.steps)) {
+    const steps = row.steps
+      .filter((item): item is string => typeof item === "string")
+      .map((item) => item.trim())
+      .filter((item) => item.length >= 4)
+      .slice(0, 6);
+    if (steps.length >= 2) row.steps = steps;
+  }
+  if (Array.isArray(row.sources)) row.sources = row.sources.slice(0, 8);
+  return row;
 }
 
 async function readSections(text: string, model: string): Promise<z.infer<typeof SectionsSchema>> {
   try {
-    return SectionsSchema.parse(extractJson(text));
+    return parseSectionNotes(extractJson(text));
   } catch {
     const repaired = await callClaude({
       model,
@@ -230,7 +257,7 @@ async function readSections(text: string, model: string): Promise<z.infer<typeof
       system: "Turn the notes into one JSON object and nothing else. Keys: steps, asks, contact_name, contact_email, contact_link, contact_link_label, contact_none, company_note, sources, researched. sources is an array of objects with label and url. Use null for unknown contact fields. Do not add facts.",
       user: text.slice(0, 12000),
     });
-    return SectionsSchema.parse(extractJson(repaired));
+    return parseSectionNotes(extractJson(repaired));
   }
 }
 
@@ -319,7 +346,7 @@ export function settleSections(
     howToApply: {
       steps: parsed.steps.map((step) => tidy(step)).slice(0, 6),
       url: applyUrl(job),
-      asks: (parsed.asks || []).map((ask) => tidy(ask)).filter(Boolean).slice(0, 8),
+      asks: (parsed.asks || []).map((ask) => tidy(ask)).filter(Boolean).slice(0, ASK_LIMIT),
     },
     contact,
     companyNote,
@@ -345,7 +372,7 @@ function asksFromListing(description: string): string[] {
     if (/^(we hope|why should|our clients|about the company|you will contribute)\b/i.test(line)) capture = false;
     if (capture && line.length > 12 && line.length < 200) out.push(line);
   }
-  if (out.length) return out.slice(0, 8);
+  if (out.length) return out.slice(0, ASK_LIMIT);
   return lines.filter((line) => /must have|hands-on experience|right to work/i.test(line)).slice(0, 6);
 }
 

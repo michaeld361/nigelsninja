@@ -21,6 +21,7 @@ export default async function ApplyDetailPage({ params }: { params: Promise<{ id
   const guide = asGuide(pack.howToApply, job.applyUrl || job.sources[0]?.url || "");
   const contact = asContact(pack.contact);
   const sources = pack.companySources || [];
+  const notice = shownNotice(pack.error);
   return (
     <article>
       <RefreshWhilePreparing preparing={pack.state === "preparing"} />
@@ -37,7 +38,7 @@ export default async function ApplyDetailPage({ params }: { params: Promise<{ id
       {pack.state === "failed" ? (
         <div className="mt-10 max-w-xl">
           <p className="font-serif text-3xl leading-snug tracking-tight">This one did not finish.</p>
-          <p className="mt-3 text-sm text-muted-foreground">{pack.error}</p>
+          {notice ? <p className="mt-3 text-sm text-muted-foreground">{notice}</p> : null}
           <div className="mt-6">
             <ApplyActions jobId={job.id} letterText="" letterId={null} retry />
           </div>
@@ -45,7 +46,7 @@ export default async function ApplyDetailPage({ params }: { params: Promise<{ id
       ) : null}
       {pack.state === "ready" && formatted ? (
         <div className="mt-16 max-w-2xl">
-          {pack.error ? <p className="mb-16 text-sm leading-6 text-muted-foreground">{pack.error}</p> : null}
+          {notice ? <p className="mb-16 text-sm leading-6 text-muted-foreground">{notice}</p> : null}
           <LetterSheet letter={formatted} letterId={letter?.id ?? null} />
           <section className="mt-28 border-t pt-16">
             <h2 className="font-serif text-3xl tracking-tight">How to apply</h2>
@@ -129,6 +130,12 @@ function ContactBlock({ contact }: { contact: ApplyContact | null }) {
       ) : null}
     </div>
   );
+}
+
+function shownNotice(error: string | null): string | null {
+  if (!error) return null;
+  if (/too_big|Too big: expected array|"asks"/.test(error)) return null;
+  return error;
 }
 
 function contactLine(contact: ApplyContact | string | null): string | null {

@@ -11,7 +11,7 @@ import { normaliseRaw } from "../pipeline/normalise";
 import { PRACTISING_QUALIFICATION, practisingQualificationReason, prefilterJob } from "../pipeline/prefilter";
 import { scoreLocal } from "../pipeline/score";
 import { letterBodyForDisplay, recipientLines, suggestedSubject } from "../lib/letter-plain";
-import { localSections, settleSections } from "../pipeline/apply-pack";
+import { localSections, parseSectionNotes, settleSections } from "../pipeline/apply-pack";
 import type { Job } from "../lib/types";
 import { draftLetterLocal, enforceStyle } from "../pipeline/write";
 import type { RawJob } from "../lib/types";
@@ -66,6 +66,44 @@ test("keeps a public contact and drops one that was not retrieved", () => {
   assert.equal(settled.contact.link, "https://lexdinamica.com/careers");
   assert.equal(settled.liveResearch, true);
   assert.equal(settled.howToApply.url, "https://uk.linkedin.com/jobs/view/1");
+});
+
+test("a long requirement list still finishes the pack sections", () => {
+  const job = {
+    company: "Everest",
+    title: "Data Protection Officer",
+    descriptionText: "Requirements are listed below.",
+    sources: [{ source: "linkedin", url: "https://uk.linkedin.com/jobs/view/everest", publisher: "LinkedIn", demo: false }],
+    applyUrl: "https://uk.linkedin.com/jobs/view/everest",
+  } as Job;
+  const asks = Array.from({ length: 12 }, (_, index) => `Requirement ${index + 1} written in the listing`);
+  const parsed = parseSectionNotes({
+    steps: ["Open the LinkedIn listing.", "Use Apply on that page.", "Attach the CV and this letter.", "Extra step that should be dropped.", "Another extra step.", "Sixth step stays.", "Seventh step drops."],
+    asks: ["x", ...asks, "Requirement 13 written in the listing"],
+    contact_name: null,
+    contact_email: null,
+    contact_link: null,
+    contact_none: "No named contact, email, or hiring link is public.",
+    company_note: "Everest is a recruitment firm placing privacy specialists into in-house teams.",
+    sources: [{ label: "Everest", url: "https://www.everest.co.uk/" }],
+    researched: true,
+  });
+  assert.equal(parsed.asks?.length, 13);
+  const many = Array.from({ length: 24 }, (_, index) => `Further requirement ${index + 1} from the listing`);
+  const capped = parseSectionNotes({
+    steps: ["Open the LinkedIn listing.", "Use Apply on that page."],
+    asks: many,
+    company_note: "Everest is a recruitment firm placing privacy specialists into in-house teams.",
+    researched: false,
+  });
+  assert.equal(capped.asks?.length, 20);
+  assert.equal(parsed.steps.length, 6);
+  const settled = settleSections(parsed, job, "https://www.everest.co.uk/", true, "claude-fable-5-1");
+  assert.equal(settled.howToApply.asks.length, 13);
+  assert.equal(settled.howToApply.steps.length, 6);
+  assert.equal(settled.liveResearch, true);
+  assert.match(settled.companyNote, /Everest/);
+  assert.equal(settled.contact.none, "No named contact, email, or hiring link is public.");
 });
 
 test("keeps real senior titles and drops junior ones", () => {
