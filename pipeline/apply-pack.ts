@@ -1,21 +1,37 @@
 import { LETTER_PROMPT_VERSION } from "@/lib/defaults";
 import { loadStore, updateStore } from "@/lib/store";
 import { stripLongDashes, toUkEnglish } from "@/lib/text";
-import type { ApplyPack, Job, Letter, Settings } from "@/lib/types";
+import type { ApplyContact, ApplyPack, CompanySource, HowToApply, Job, Letter, Settings } from "@/lib/types";
 import { factCheck } from "./check";
-import { callClaudeWithWebSearch, extractJson } from "./llm";
+import { callClaude, callClaudeWithWebSearch, extractJson } from "./llm";
 import { scoreLocal, type ScoreResult } from "./score";
 import { draftLetterLocal, enforceStyle, type LetterDraft } from "./write";
 import { styleCheck } from "@/lib/style-check";
 import { z } from "zod";
 
-const PackSchema = z.object({
+const LetterSchema = z.object({
   letter_paragraphs: z.array(z.string()).min(3).max(6),
-  how_to_apply: z.string().min(20),
-  contact: z.string().min(8),
-  company_note: z.string().min(40),
+});
+
+const SourceSchema = z
+  .union([z.object({ label: z.string().optional(), url: z.string() }), z.string()])
+  .transform((item) => (typeof item === "string" ? { label: item, url: item } : { label: item.label || item.url, url: item.url }));
+
+const SectionsSchema = z.object({
+  steps: z.array(z.string().min(4)).min(2).max(6),
+  asks: z.array(z.string().min(2)).max(8).optional(),
+  contact_name: z.string().nullable().optional(),
+  contact_email: z.string().nullable().optional(),
+  contact_link: z.string().nullable().optional(),
+  contact_link_label: z.string().nullable().optional(),
+  contact_none: z.string().nullable().optional(),
+  company_note: z.string().min(20),
+  sources: z.array(SourceSchema).max(8).optional(),
   researched: z.boolean(),
 });
+
+const NONE_PUBLIC = "No named contact, email, or hiring link is public.";
+const NO_NOTE = "A live lookup did not return a current source, so there is no company note.";
 
 export function writingModel(): string {
   return process.env.WRITING_MODEL || "claude-fable-5-1";
@@ -61,6 +77,7 @@ export async function finishApplyPack(jobId: string): Promise<void> {
           store.settings,
         );
     const composed = await compose(job, score, store.settings, store.profile);
+    const sections = await researchSections(job);
     const letter = toLetter(job, composed.draft, store);
     letter.cvVersion = store.profile.cvVersion || 1;
     updateStore((next) => {
@@ -68,12 +85,13 @@ export async function finishApplyPack(jobId: string): Promise<void> {
       if (!row || row.state !== "preparing") return;
       next.letters.push(letter);
       row.letterId = letter.id;
-      row.howToApply = composed.howToApply;
-      row.contact = composed.contact;
-      row.companyNote = composed.companyNote;
-      row.liveResearch = composed.liveResearch;
-      row.model = composed.model;
-      row.error = composed.notice;
+      row.howToApply = sections.howToApply;
+      row.contact = sections.contact;
+      row.companyNote = sections.companyNote;
+      row.companySources = sections.sources;
+      row.liveResearch = sections.liveResearch;
+      row.model = sections.model || composed.model;
+      row.error = [composed.notice, sections.notice].filter(Boolean).join(" ") || null;
       row.state = "ready";
       row.readyAt = new Date().toISOString();
     });
@@ -95,15 +113,13 @@ async function compose(job: Job, score: ScoreResult, settings: Settings, profile
   try {
     const model = writingModel();
     const listing = job.sources.find((source) => source.source === "linkedin")?.url || job.applyUrl || job.sources[0]?.url || "";
-    const { text, searched } = await callClaudeWithWebSearch({
+    const text = await callClaude({
       model,
       maxTokens: 4000,
       system: [
         "You draft a job application pack for Nigel Down, a UK data privacy professional. UK English. No em dashes or en dashes. Hyphens are fine.",
         "Use only facts from the CV, LinkedIn summary and personal statement for the letter. Never write 'current role'. He left MullenLowe in July 2026. Write 'CIPP/E, CIPM and AIGP'. Mention Mantle at most once. 4 or 5 paragraphs, 220 to 380 words.",
-        "Search the web for the company before the company note. Do not rely on memory. If the search does not return a usable current source, say so and use only the job listing. Set researched to true only when the company note uses a web result.",
-        "Do not invent a recruiter, an email, or an application portal. If the listing has no named contact, say so.",
-        "Return JSON only, with keys letter_paragraphs, how_to_apply, contact, company_note, researched.",
+        "Return JSON only, with the key letter_paragraphs.",
         profile.cvText,
         profile.linkedinSummary,
         profile.personalStatement,
@@ -120,7 +136,7 @@ async function compose(job: Job, score: ScoreResult, settings: Settings, profile
         .filter(Boolean)
         .join("\n\n"),
     });
-    const parsed = PackSchema.parse(extractJson(text));
+    const parsed = LetterSchema.parse(extractJson(text));
     const cleaned = parsed.letter_paragraphs.map((paragraph) => toUkEnglish(stripLongDashes(paragraph)));
     let draft = enforceStyle(
       {
@@ -140,16 +156,7 @@ async function compose(job: Job, score: ScoreResult, settings: Settings, profile
     if (styleFailed && draft.model !== "local-draft") {
       draft = local.draft;
     }
-    const live = Boolean(parsed.researched && searched);
-    return {
-      draft,
-      howToApply: tidy(parsed.how_to_apply),
-      contact: tidy(parsed.contact),
-      companyNote: tidy(parsed.company_note),
-      liveResearch: live,
-      model,
-      notice: live ? null : "The company note did not use a live web result, so treat it as coming from the listing.",
-    };
+    return { draft, model, notice: null as string | null };
   } catch (error) {
     return {
       ...local,
@@ -160,21 +167,211 @@ async function compose(job: Job, score: ScoreResult, settings: Settings, profile
 
 function localPieces(job: Job, score: ScoreResult, settings: Settings) {
   const draft = enforceStyle(draftLetterLocal(letterJob(job), score, settings), letterJob(job), score, settings);
-  const url = job.sources.find((source) => source.source === "linkedin")?.url || job.applyUrl || job.sources[0]?.url || "";
-  const email = job.descriptionText.match(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i)?.[0] ?? null;
   return {
     draft,
-    howToApply: url
-      ? `Open the LinkedIn posting and use Apply there. ${url} The listing is the application route. Do not send the letter to a guessed address.`
-      : "The listing did not include an apply link. Open the role on LinkedIn and apply from the posting.",
-    contact: email
-      ? `The listing names ${email}. There is no hiring manager named in the text we have.`
-      : "No named contact on the listing. Apply through the LinkedIn posting rather than guessing an email.",
-    companyNote: `Live company research did not run, because this machine has no Anthropic key. This note uses only the job listing.\n\n${job.descriptionText.trim().slice(0, 700)}`,
+    model: "local-draft",
+    notice: "The letter was written on this machine from Nigel's CV and the listing.",
+  };
+}
+
+export type SectionDraft = {
+  howToApply: HowToApply;
+  contact: ApplyContact;
+  companyNote: string;
+  sources: CompanySource[];
+  liveResearch: boolean;
+  model: string;
+  notice: string | null;
+};
+
+export async function researchSections(job: Job): Promise<SectionDraft> {
+  const fallback = localSections(job);
+  if (!process.env.ANTHROPIC_API_KEY) return fallback;
+  try {
+    const model = writingModel();
+    const listing = applyUrl(job);
+    const { text, searched, evidence } = await callClaudeWithWebSearch({
+      model,
+      maxTokens: 4000,
+      maxUses: 6,
+      system: [
+        "You prepare three parts of a job application for Nigel Down. UK English. No em dashes or en dashes.",
+        "Search the web for the company and for a public hiring contact before you answer. Do not use memory for facts about the company.",
+        "Do not invent a person, an email, a hiring link, a date, or a company fact. If a page you retrieved does not say it, leave it out.",
+        "steps: 3 to 5 short ordered steps. One sentence each. Do not paste the URL into a step.",
+        "asks: short phrases for what the listing itself asks for. Only requirements written in the listing.",
+        "Contact: set contact_name, contact_email, or contact_link only when that exact detail appears in the listing or in a page you retrieved. Otherwise set all three to null and set contact_none to exactly: No named contact, email, or hiring link is public.",
+        "company_note: 3 to 5 sentences on what the company does now and anything recent that matters for this application. Every sentence must come from a retrieved page. List those pages in sources. If you cannot retrieve a page, set researched to false and set company_note to exactly: A live lookup did not return a current source, so there is no company note.",
+        "Return JSON only, with keys steps, asks, contact_name, contact_email, contact_link, contact_link_label, contact_none, company_note, sources, researched.",
+      ].join("\n"),
+      user: [
+        `Company: ${job.company}`,
+        `Title: ${job.title}`,
+        `Location: ${job.location}`,
+        `Apply URL, use this and do not replace it: ${listing || "none"}`,
+        job.descriptionText,
+      ].join("\n\n"),
+    });
+    const parsed = await readSections(text, model);
+    return settleSections(parsed, job, `${job.descriptionText}\n${evidence}`, searched, model);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "error";
+    return { ...fallback, notice: `Live lookup did not finish (${message.slice(0, 240)}).` };
+  }
+}
+
+async function readSections(text: string, model: string): Promise<z.infer<typeof SectionsSchema>> {
+  try {
+    return SectionsSchema.parse(extractJson(text));
+  } catch {
+    const repaired = await callClaude({
+      model,
+      maxTokens: 2000,
+      system: "Turn the notes into one JSON object and nothing else. Keys: steps, asks, contact_name, contact_email, contact_link, contact_link_label, contact_none, company_note, sources, researched. sources is an array of objects with label and url. Use null for unknown contact fields. Do not add facts.",
+      user: text.slice(0, 12000),
+    });
+    return SectionsSchema.parse(extractJson(repaired));
+  }
+}
+
+export async function refreshApplySections(jobId: string): Promise<SectionDraft | null> {
+  const store = loadStore();
+  const job = store.jobs.find((item) => item.id === jobId);
+  const pack = store.applyPacks.find((item) => item.jobId === jobId);
+  if (!job || !pack || pack.state === "preparing") return null;
+  const sections = await researchSections(job);
+  const failed = sections.model === "local-draft";
+  updateStore((next) => {
+    const row = next.applyPacks.find((item) => item.jobId === jobId);
+    if (!row) return;
+    if (!failed) {
+      row.howToApply = sections.howToApply;
+      row.contact = sections.contact;
+      row.companyNote = sections.companyNote;
+      row.companySources = sections.sources;
+      row.liveResearch = sections.liveResearch;
+      row.model = sections.model || row.model;
+      row.error = sections.notice;
+    }
+    row.state = "ready";
+    row.readyAt = row.readyAt || new Date().toISOString();
+  });
+  return sections;
+}
+
+export function localSections(job: Job): SectionDraft {
+  const url = applyUrl(job);
+  const email = job.descriptionText.match(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i)?.[0] ?? null;
+  const posted = job.descriptionText.match(/Posted on LinkedIn by ([^.\n]+)/)?.[1]?.trim() ?? null;
+  return {
+    howToApply: {
+      steps: [
+        "Open the LinkedIn listing.",
+        "Use Apply on that page, and do not send the letter to a guessed address.",
+        "Attach the CV and this letter.",
+      ],
+      url,
+      asks: asksFromListing(job.descriptionText),
+    },
+    contact:
+      email || posted
+        ? { name: posted, email, link: null, linkLabel: null, none: null }
+        : { name: null, email: null, link: null, linkLabel: null, none: NONE_PUBLIC },
+    companyNote: NO_NOTE,
+    sources: [],
     liveResearch: false,
     model: "local-draft",
-    notice: "Live company research did not run. This pack was written on this machine from Nigel's CV and the listing.",
+    notice: "Live company research did not run.",
   };
+}
+
+export function settleSections(
+  parsed: z.infer<typeof SectionsSchema>,
+  job: Job,
+  evidence: string,
+  searched: boolean,
+  model: string,
+): SectionDraft {
+  const haystack = evidence.toLowerCase();
+  const email = cleanField(parsed.contact_email);
+  const name = cleanField(parsed.contact_name);
+  const link = cleanField(parsed.contact_link);
+  const keptEmail = email && haystack.includes(email.toLowerCase()) ? email : null;
+  const keptName = name && nameInEvidence(name, haystack) ? tidy(name) : null;
+  const keptLink = link && urlInEvidence(link, evidence) ? link : null;
+  const contact: ApplyContact =
+    keptEmail || keptName || keptLink
+      ? {
+          name: keptName,
+          email: keptEmail,
+          link: keptLink,
+          linkLabel: keptLink ? tidy(cleanField(parsed.contact_link_label) || "Hiring link") : null,
+          none: null,
+        }
+      : { name: null, email: null, link: null, linkLabel: null, none: NONE_PUBLIC };
+  const sources = (parsed.sources || [])
+    .map((source) => ({ label: tidy(source.label).slice(0, 120), url: source.url.trim() }))
+    .filter((source) => urlInEvidence(source.url, evidence))
+    .slice(0, 4);
+  const live = Boolean(searched && parsed.researched && sources.length);
+  const companyNote = live ? tidy(parsed.company_note) : NO_NOTE;
+  return {
+    howToApply: {
+      steps: parsed.steps.map((step) => tidy(step)).slice(0, 6),
+      url: applyUrl(job),
+      asks: (parsed.asks || []).map((ask) => tidy(ask)).filter(Boolean).slice(0, 8),
+    },
+    contact,
+    companyNote,
+    sources: live ? sources : [],
+    liveResearch: live,
+    model,
+    notice: live ? null : null,
+  };
+}
+
+function asksFromListing(description: string): string[] {
+  const lines = description
+    .split(/\n+/)
+    .map((line) => line.replace(/^[\s\-*•]+/, "").trim())
+    .filter(Boolean);
+  const out: string[] = [];
+  let capture = false;
+  for (const line of lines) {
+    if (/^(must haves?|in this role|requirements|essential)\b/i.test(line)) {
+      capture = true;
+      continue;
+    }
+    if (/^(we hope|why should|our clients|about the company|you will contribute)\b/i.test(line)) capture = false;
+    if (capture && line.length > 12 && line.length < 200) out.push(line);
+  }
+  if (out.length) return out.slice(0, 8);
+  return lines.filter((line) => /must have|hands-on experience|right to work/i.test(line)).slice(0, 6);
+}
+
+function applyUrl(job: Job): string {
+  return job.sources.find((source) => source.source === "linkedin")?.url || job.applyUrl || job.sources[0]?.url || "";
+}
+
+function cleanField(value: string | null | undefined): string | null {
+  const text = (value || "").trim();
+  if (!text || /^null$/i.test(text) || text === "none") return null;
+  return text;
+}
+
+function nameInEvidence(name: string, haystack: string): boolean {
+  const parts = name.toLowerCase().split(/\s+/).filter((part) => part.length > 2);
+  return parts.length > 0 && parts.every((part) => haystack.includes(part));
+}
+
+function urlInEvidence(url: string, evidence: string): boolean {
+  try {
+    const parsed = new URL(url);
+    if (parsed.protocol !== "http:" && parsed.protocol !== "https:") return false;
+    return evidence.includes(parsed.href) || evidence.includes(parsed.hostname);
+  } catch {
+    return false;
+  }
 }
 
 function letterJob(job: Job) {
@@ -229,6 +426,7 @@ export function createPreparingPack(jobId: string): ApplyPack {
     howToApply: null,
     contact: null,
     companyNote: null,
+    companySources: [],
     liveResearch: false,
     model: "",
     error: null,

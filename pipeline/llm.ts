@@ -57,44 +57,50 @@ export async function callClaudeWithWebSearch(input: {
   system: string;
   user: string;
   maxTokens: number;
-}): Promise<{ text: string; searched: boolean }> {
+  maxUses?: number;
+}): Promise<{ text: string; searched: boolean; evidence: string }> {
   const tools = [
     {
       type: "web_search_20260209" as const,
       name: "web_search" as const,
-      max_uses: 4,
+      max_uses: input.maxUses ?? 5,
       user_location: { type: "approximate" as const, city: "London", region: "England", country: "GB", timezone: "Europe/London" },
     },
   ];
+  const messages: Anthropic.MessageParam[] = [{ role: "user", content: input.user }];
   let response = await anthropic().messages.create({
     model: input.model,
     max_tokens: input.maxTokens,
     system: input.system,
-    messages: [{ role: "user", content: input.user }],
+    messages,
     tools,
   });
   noteUsage(input.model, response.usage);
-  if (response.stop_reason === "pause_turn") {
+  const seen: Anthropic.Message["content"][] = [response.content];
+  for (let turn = 0; turn < 4 && response.stop_reason === "pause_turn"; turn += 1) {
+    messages.push({ role: "assistant", content: response.content });
     response = await anthropic().messages.create({
       model: input.model,
       max_tokens: input.maxTokens,
       system: input.system,
-      messages: [
-        { role: "user", content: input.user },
-        { role: "assistant", content: response.content },
-      ],
+      messages,
       tools,
     });
     noteUsage(input.model, response.usage);
+    seen.push(response.content);
   }
   const text = response.content
     .map((block) => (block.type === "text" ? block.text : ""))
     .filter(Boolean)
     .join("\n")
     .trim();
-  const searched = response.content.some((block) => block.type === "web_search_tool_result");
+  const searched = seen.some((content) => content.some((block) => block.type === "web_search_tool_result"));
+  const evidence = seen
+    .map((content) => JSON.stringify(content))
+    .join("\n")
+    .slice(0, 120000);
   if (!text) throw new Error("Empty model response");
-  return { text, searched };
+  return { text, searched, evidence };
 }
 
 function noteUsage(model: string, usage: { input_tokens?: number | null; output_tokens?: number | null; server_tool_use?: { web_search_requests?: number | null } | null } | undefined) {

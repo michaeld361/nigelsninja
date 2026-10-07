@@ -241,14 +241,34 @@ export type MagicLink = {
   used: boolean;
 };
 
+export type HowToApply = {
+  steps: string[];
+  url: string;
+  asks: string[];
+};
+
+export type ApplyContact = {
+  name: string | null;
+  email: string | null;
+  link: string | null;
+  linkLabel: string | null;
+  none: string | null;
+};
+
+export type CompanySource = {
+  label: string;
+  url: string;
+};
+
 export type ApplyPack = {
   id: string;
   jobId: string;
   state: ApplyState;
   letterId: string | null;
-  howToApply: string | null;
-  contact: string | null;
+  howToApply: HowToApply | string | null;
+  contact: ApplyContact | string | null;
   companyNote: string | null;
+  companySources: CompanySource[];
   liveResearch: boolean;
   model: string;
   error: string | null;

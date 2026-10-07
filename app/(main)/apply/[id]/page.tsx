@@ -6,6 +6,7 @@ import { PreparingLine } from "@/components/preparing-line";
 import { RefreshWhilePreparing } from "@/components/refresh-preparing";
 import { formalLetter } from "@/lib/letter-plain";
 import { loadStore } from "@/lib/store";
+import type { ApplyContact, HowToApply } from "@/lib/types";
 
 export default async function ApplyDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -15,8 +16,11 @@ export default async function ApplyDetailPage({ params }: { params: Promise<{ id
   if (!job || !pack) return <MissingJob />;
   const letter = pack.letterId ? store.letters.find((item) => item.id === pack.letterId) : null;
   const formatted = letter
-    ? formalLetter(letter, store.settings, store.profile, { title: job.title, company: job.company }, pack.contact)
+    ? formalLetter(letter, store.settings, store.profile, { title: job.title, company: job.company }, contactLine(pack.contact))
     : null;
+  const guide = asGuide(pack.howToApply, job.applyUrl || job.sources[0]?.url || "");
+  const contact = asContact(pack.contact);
+  const sources = pack.companySources || [];
   return (
     <article>
       <RefreshWhilePreparing preparing={pack.state === "preparing"} />
@@ -45,18 +49,103 @@ export default async function ApplyDetailPage({ params }: { params: Promise<{ id
           <LetterSheet letter={formatted} letterId={letter?.id ?? null} />
           <section className="mt-28 border-t pt-16">
             <h2 className="font-serif text-3xl tracking-tight">How to apply</h2>
-            <p className="mt-6 max-w-xl whitespace-pre-wrap text-base leading-8">{pack.howToApply}</p>
+            {guide ? (
+              <div className="mt-8 max-w-xl">
+                <ol className="list-decimal space-y-3 pl-5 text-base leading-7">
+                  {guide.steps.map((step) => (
+                    <li key={step}>{step}</li>
+                  ))}
+                </ol>
+                {guide.url ? (
+                  <p className="mt-8 text-sm leading-6">
+                    <a className="underline decoration-foreground/30 underline-offset-4" href={guide.url}>
+                      {guide.url}
+                    </a>
+                  </p>
+                ) : null}
+                {guide.asks.length ? (
+                  <div className="mt-8">
+                    <p className="text-sm text-muted-foreground">They ask for</p>
+                    <ul className="mt-3 list-disc space-y-2 pl-5 text-base leading-7">
+                      {guide.asks.map((ask) => (
+                        <li key={ask}>{ask}</li>
+                      ))}
+                    </ul>
+                  </div>
+                ) : null}
+              </div>
+            ) : null}
           </section>
           <section className="mt-28 border-t pt-16">
             <h2 className="font-serif text-3xl tracking-tight">Contact</h2>
-            <p className="mt-6 max-w-xl whitespace-pre-wrap text-base leading-8">{pack.contact}</p>
+            <ContactBlock contact={contact} />
           </section>
           <section className="mt-28 border-t pt-16">
             <h2 className="font-serif text-3xl tracking-tight">The company</h2>
-            <p className="mt-6 max-w-xl whitespace-pre-wrap text-base leading-8">{pack.companyNote}</p>
+            <div className="mt-8 max-w-xl space-y-4 text-base leading-8">
+              {(pack.companyNote || "").split(/\n\n+/).filter(Boolean).map((paragraph) => (
+                <p key={paragraph.slice(0, 40)}>{paragraph}</p>
+              ))}
+            </div>
+            {sources.length ? (
+              <ul className="mt-6 max-w-xl space-y-2 text-sm leading-6 text-muted-foreground">
+                {sources.map((source) => (
+                  <li key={source.url}>
+                    <a className="underline decoration-foreground/20 underline-offset-4" href={source.url}>
+                      {source.label}
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            ) : null}
           </section>
         </div>
       ) : null}
     </article>
   );
+}
+
+function ContactBlock({ contact }: { contact: ApplyContact | null }) {
+  if (!contact) return null;
+  if (!contact.name && !contact.email && !contact.link) {
+    return <p className="mt-8 max-w-xl text-base leading-8">{contact.none}</p>;
+  }
+  return (
+    <div className="mt-8 max-w-xl space-y-2 text-base leading-8">
+      {contact.name ? <p>{contact.name}</p> : null}
+      {contact.email ? (
+        <p>
+          <a className="underline decoration-foreground/30 underline-offset-4" href={`mailto:${contact.email}`}>
+            {contact.email}
+          </a>
+        </p>
+      ) : null}
+      {contact.link ? (
+        <p>
+          <a className="underline decoration-foreground/30 underline-offset-4" href={contact.link}>
+            {contact.linkLabel || contact.link}
+          </a>
+        </p>
+      ) : null}
+    </div>
+  );
+}
+
+function contactLine(contact: ApplyContact | string | null): string | null {
+  const value = asContact(contact);
+  if (!value) return typeof contact === "string" ? contact : null;
+  if (!value.name && !value.email && !value.link) return value.none;
+  return [value.name, value.email].filter(Boolean).join(", ");
+}
+
+function asGuide(value: HowToApply | string | null, url: string): HowToApply | null {
+  if (!value) return null;
+  if (typeof value === "string") return { steps: [value], url, asks: [] };
+  return value;
+}
+
+function asContact(value: ApplyContact | string | null): ApplyContact | null {
+  if (!value) return null;
+  if (typeof value === "string") return { name: null, email: null, link: null, linkLabel: null, none: value };
+  return value;
 }

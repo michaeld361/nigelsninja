@@ -10,6 +10,8 @@ import { normaliseRaw } from "../pipeline/normalise";
 import { prefilterJob } from "../pipeline/prefilter";
 import { scoreLocal } from "../pipeline/score";
 import { letterBodyForDisplay, recipientLines, suggestedSubject } from "../lib/letter-plain";
+import { localSections, settleSections } from "../pipeline/apply-pack";
+import type { Job } from "../lib/types";
 import { draftLetterLocal, enforceStyle } from "../pipeline/write";
 import type { RawJob } from "../lib/types";
 
@@ -26,6 +28,43 @@ test("lays a letter out without a second greeting or close", () => {
   assert.deepEqual(recipientLines("Lex Dinamica", "No named contact is given in the listing."), ["Lex Dinamica"]);
   assert.deepEqual(recipientLines("Lex Dinamica", "Write to Ada Lovelace at ada@example.com."), ["Ada Lovelace", "ada@example.com", "Lex Dinamica"]);
   assert.equal(suggestedSubject("Data Privacy Manager", "Lex Dinamica"), "Application for Data Privacy Manager, Lex Dinamica");
+});
+
+test("keeps a public contact and drops one that was not retrieved", () => {
+  const job = {
+    company: "Lex Dinamica",
+    title: "Data Privacy Manager",
+    descriptionText: "Must have hands-on OneTrust. Posted on LinkedIn by Ada Lovelace.",
+    sources: [{ source: "linkedin", url: "https://uk.linkedin.com/jobs/view/1", publisher: "LinkedIn", demo: false }],
+    applyUrl: "https://uk.linkedin.com/jobs/view/1",
+  } as Job;
+  const local = localSections(job);
+  assert.equal(local.contact.name, "Ada Lovelace");
+  assert.equal(local.contact.none, null);
+  assert.ok(local.howToApply.asks.some((ask) => /OneTrust/i.test(ask)));
+  const settled = settleSections(
+    {
+      steps: ["Open the listing.", "Use Apply on that page."],
+      asks: ["Hands-on OneTrust"],
+      contact_name: "Ada Lovelace",
+      contact_email: "ada@example.com",
+      contact_link: "https://lexdinamica.com/careers",
+      contact_link_label: "Careers",
+      contact_none: null,
+      company_note: "Lex Dinamica is a London privacy consultancy.",
+      sources: [{ label: "Lex Dinamica", url: "https://lexdinamica.com/" }],
+      researched: true,
+    },
+    job,
+    `${job.descriptionText}\nhttps://lexdinamica.com/careers Ada Lovelace`,
+    true,
+    "claude-fable-5-1",
+  );
+  assert.equal(settled.contact.email, null);
+  assert.equal(settled.contact.name, "Ada Lovelace");
+  assert.equal(settled.contact.link, "https://lexdinamica.com/careers");
+  assert.equal(settled.liveResearch, true);
+  assert.equal(settled.howToApply.url, "https://uk.linkedin.com/jobs/view/1");
 });
 
 test("keeps real senior titles and drops junior ones", () => {

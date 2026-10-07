@@ -59,6 +59,7 @@ function ensureStoreFile() {
 
 function normalise(store: Store): Store {
   if (!store.applyPacks) store.applyPacks = [];
+  for (const pack of store.applyPacks) if (!pack.companySources) pack.companySources = [];
   return store;
 }
 
