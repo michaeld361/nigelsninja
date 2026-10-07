@@ -1,8 +1,8 @@
 import Link from "next/link";
-import { AddToApply } from "@/components/add-to-apply";
+import { JobActions } from "@/components/job-actions";
 import { MissingJob } from "@/components/missing-job";
 import { PreparingLine } from "@/components/preparing-line";
-import { salaryLabel } from "@/lib/format";
+import { jobMeta } from "@/lib/format";
 import { loadStore } from "@/lib/store";
 
 export default async function JobPage({ params }: { params: Promise<{ id: string }> }) {
@@ -14,15 +14,12 @@ export default async function JobPage({ params }: { params: Promise<{ id: string
   const listing = job.sources.find((source) => source.source === "linkedin") ?? job.sources[0];
   return (
     <article>
-      <Link href="/jobs" className="text-sm text-muted-foreground">
-        Jobs
+      <Link href={job.status === "skipped" ? "/skipped" : "/jobs"} className="text-sm text-muted-foreground">
+        {job.status === "skipped" ? "Skipped" : "Jobs"}
       </Link>
       <h1 className="mt-4 font-serif text-5xl tracking-tight">{job.title}</h1>
       <p className="mt-2 text-xl">{job.company}</p>
-      <p className="mt-2 text-sm text-muted-foreground">
-        {job.location}
-        {job.demo ? " · Sample listing" : ""} · {salaryLabel(job)}
-      </p>
+      <p className="mt-2 text-sm text-muted-foreground">{jobMeta(job)}</p>
       <div className="mt-8">
         {pack ? (
           <div>
@@ -36,7 +33,7 @@ export default async function JobPage({ params }: { params: Promise<{ id: string
             ) : null}
           </div>
         ) : (
-          <AddToApply jobId={job.id} />
+          <JobActions jobId={job.id} allowSkip={job.status !== "skipped"} />
         )}
       </div>
       {listing ? (

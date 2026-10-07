@@ -369,6 +369,25 @@ export async function retryLetters(): Promise<ActionResult> {
   return { ok: true, message: pending.length ? `Drafted ${pending.length} letter${pending.length === 1 ? "" : "s"}.` : "No failed letters to retry." };
 }
 
+export async function skipJob(jobId: string): Promise<ActionResult> {
+  const session = await actor();
+  if (!session) return { ok: false, message: "Sign in again." };
+  const missing = updateStore((store) => {
+    const job = store.jobs.find((item) => item.id === jobId);
+    if (!job) return true;
+    const from = job.status;
+    job.status = "skipped";
+    job.statusChangedAt = new Date().toISOString();
+    store.statusEvents.push({ id: crypto.randomUUID(), jobId, from, to: "skipped", at: job.statusChangedAt, by: session.email });
+    return false;
+  });
+  if (missing) return { ok: false, message: "That role is not in the queue." };
+  revalidatePath("/jobs");
+  revalidatePath("/skipped");
+  revalidatePath(`/jobs/${jobId}`);
+  redirect("/skipped");
+}
+
 export async function addToApplyList(jobId: string): Promise<ActionResult> {
   const session = await actor();
   if (!session) return { ok: false, message: "Sign in again." };

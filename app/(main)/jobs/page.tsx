@@ -1,6 +1,6 @@
 import Link from "next/link";
-import { AddToApply } from "@/components/add-to-apply";
-import { salaryLabel } from "@/lib/format";
+import { JobActions } from "@/components/job-actions";
+import { jobMeta } from "@/lib/format";
 import { loadStore } from "@/lib/store";
 import type { Run } from "@/lib/types";
 
@@ -21,6 +21,11 @@ export default function JobsPage() {
       <p className="mt-4 max-w-xl text-lg leading-8 text-muted-foreground">
         LinkedIn roles that match your search. If one is worth applying for, add it. Nothing is sent for you.
       </p>
+      <p className="mt-6 text-sm">
+        <Link href="/skipped" className="text-muted-foreground underline decoration-foreground/20 underline-offset-4">
+          Skipped
+        </Link>
+      </p>
       {sample ? (
         <p className="mt-6 max-w-xl text-sm leading-6 text-muted-foreground">
           These are sample listings. Apify is not connected, so they are not live LinkedIn vacancies.
@@ -37,13 +42,10 @@ export default function JobsPage() {
               <Link href={`/jobs/${job.id}`} className="block">
                 <h2 className="font-serif text-3xl tracking-tight">{job.title}</h2>
                 <p className="mt-1 text-lg">{job.company}</p>
-                <p className="mt-2 text-sm text-muted-foreground">
-                  {job.location}
-                  {job.demo ? " · Sample" : ""} · {salaryLabel(job)}
-                </p>
+                <p className="mt-2 text-sm text-muted-foreground">{jobMeta(job)}</p>
               </Link>
               <div className="mt-5">
-                <AddToApply jobId={job.id} />
+                <JobActions jobId={job.id} />
               </div>
             </li>
           ))}

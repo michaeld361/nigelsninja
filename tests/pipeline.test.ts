@@ -9,10 +9,24 @@ import { applicationKey, dedupeKey } from "../lib/text";
 import { normaliseRaw } from "../pipeline/normalise";
 import { prefilterJob } from "../pipeline/prefilter";
 import { scoreLocal } from "../pipeline/score";
+import { letterBodyForDisplay, recipientLines, suggestedSubject } from "../lib/letter-plain";
 import { draftLetterLocal, enforceStyle } from "../pipeline/write";
 import type { RawJob } from "../lib/types";
 
 const settings = defaultSettings();
+
+test("lays a letter out without a second greeting or close", () => {
+  const paragraphs = letterBodyForDisplay([
+    "Dear Lex Dinamica team, I am applying for the role.",
+    "The work covers DPIAs and records of processing.",
+    "Thank you for reading my application. Yours faithfully,\nNigel Down\n07795633377",
+  ]);
+  assert.equal(paragraphs[0], "I am applying for the role.");
+  assert.equal(paragraphs.at(-1), "Thank you for reading my application.");
+  assert.deepEqual(recipientLines("Lex Dinamica", "No named contact is given in the listing."), ["Lex Dinamica"]);
+  assert.deepEqual(recipientLines("Lex Dinamica", "Write to Ada Lovelace at ada@example.com."), ["Ada Lovelace", "ada@example.com", "Lex Dinamica"]);
+  assert.equal(suggestedSubject("Data Privacy Manager", "Lex Dinamica"), "Application for Data Privacy Manager, Lex Dinamica");
+});
 
 test("keeps real senior titles and drops junior ones", () => {
   const keep = ["Senior Data Protection Specialist", "Data Governance Assistant Director", "Data Protection Officer", "Head of Privacy"];

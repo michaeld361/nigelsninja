@@ -1,9 +1,10 @@
 import Link from "next/link";
 import { ApplyActions } from "@/components/apply-actions";
+import { LetterSheet } from "@/components/letter-sheet";
 import { MissingJob } from "@/components/missing-job";
 import { PreparingLine } from "@/components/preparing-line";
 import { RefreshWhilePreparing } from "@/components/refresh-preparing";
-import { plainLetter } from "@/lib/letter-plain";
+import { formalLetter } from "@/lib/letter-plain";
 import { loadStore } from "@/lib/store";
 
 export default async function ApplyDetailPage({ params }: { params: Promise<{ id: string }> }) {
@@ -13,7 +14,9 @@ export default async function ApplyDetailPage({ params }: { params: Promise<{ id
   const pack = store.applyPacks.find((item) => item.jobId === id);
   if (!job || !pack) return <MissingJob />;
   const letter = pack.letterId ? store.letters.find((item) => item.id === pack.letterId) : null;
-  const letterText = letter ? plainLetter(letter, store.settings) : "";
+  const formatted = letter
+    ? formalLetter(letter, store.settings, store.profile, { title: job.title, company: job.company }, pack.contact)
+    : null;
   return (
     <article>
       <RefreshWhilePreparing preparing={pack.state === "preparing"} />
@@ -36,27 +39,21 @@ export default async function ApplyDetailPage({ params }: { params: Promise<{ id
           </div>
         </div>
       ) : null}
-      {pack.state === "ready" ? (
-        <div className="mt-12 max-w-xl space-y-12">
-          {pack.error ? <p className="text-sm leading-6 text-muted-foreground">{pack.error}</p> : null}
-          <section>
-            <h2 className="font-serif text-3xl tracking-tight">Letter</h2>
-            <div className="mt-4 whitespace-pre-wrap text-base leading-8">{letterText}</div>
-            <div className="mt-4">
-              <ApplyActions jobId={job.id} letterText={letterText} letterId={letter?.id ?? null} />
-            </div>
-          </section>
-          <section>
+      {pack.state === "ready" && formatted ? (
+        <div className="mt-16 max-w-2xl">
+          {pack.error ? <p className="mb-16 text-sm leading-6 text-muted-foreground">{pack.error}</p> : null}
+          <LetterSheet letter={formatted} letterId={letter?.id ?? null} />
+          <section className="mt-28 border-t pt-16">
             <h2 className="font-serif text-3xl tracking-tight">How to apply</h2>
-            <p className="mt-4 whitespace-pre-wrap text-base leading-8">{pack.howToApply}</p>
+            <p className="mt-6 max-w-xl whitespace-pre-wrap text-base leading-8">{pack.howToApply}</p>
           </section>
-          <section>
+          <section className="mt-28 border-t pt-16">
             <h2 className="font-serif text-3xl tracking-tight">Contact</h2>
-            <p className="mt-4 whitespace-pre-wrap text-base leading-8">{pack.contact}</p>
+            <p className="mt-6 max-w-xl whitespace-pre-wrap text-base leading-8">{pack.contact}</p>
           </section>
-          <section>
+          <section className="mt-28 border-t pt-16">
             <h2 className="font-serif text-3xl tracking-tight">The company</h2>
-            <p className="mt-4 whitespace-pre-wrap text-base leading-8">{pack.companyNote}</p>
+            <p className="mt-6 max-w-xl whitespace-pre-wrap text-base leading-8">{pack.companyNote}</p>
           </section>
         </div>
       ) : null}

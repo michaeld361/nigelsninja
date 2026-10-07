@@ -16,6 +16,7 @@ type ActorItem = {
   publishedAt?: string;
   postedAt?: string;
   postedAtTimestamp?: number;
+  publishedAt?: string;
   salary?: string;
   salaryMin?: number | null;
   salaryMax?: number | null;
@@ -52,9 +53,7 @@ export async function searchLinkedIn(params: SearchParams): Promise<SourceResult
       .filter((item) => item.title && item.companyName)
       .map((item) => {
         const listingUrl = item.jobUrl || item.link || "";
-        const postedAt = item.postedAtTimestamp
-          ? new Date(item.postedAtTimestamp).toISOString()
-          : item.postedAt || new Date().toISOString();
+        const postedAt = listingDate(item);
         const poster = item.posterFullName ? `\n\nPosted on LinkedIn by ${item.posterFullName}.` : "";
         return {
           source: "linkedin" as const,
@@ -86,6 +85,13 @@ export async function searchLinkedIn(params: SearchParams): Promise<SourceResult
       fetched: 0,
     };
   }
+}
+
+function listingDate(item: ActorItem): string {
+  if (item.postedAtTimestamp) return new Date(item.postedAtTimestamp).toISOString();
+  const raw = item.publishedAt || item.postedAt || "";
+  const match = raw.match(/^(\d{4}-\d{2}-\d{2})/);
+  return match ? match[1] : "";
 }
 
 function within(postedAt: string, lookbackHours: number): boolean {

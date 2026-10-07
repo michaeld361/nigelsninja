@@ -56,6 +56,19 @@ export function sourceLabel(source: SourceId, publisher: string | null): string 
   return "Google Jobs";
 }
 
+export function listingDate(iso: string | null | undefined): string | null {
+  if (!iso?.trim()) return null;
+  const match = iso.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (!match) return null;
+  const date = new Date(Date.UTC(Number(match[1]), Number(match[2]) - 1, Number(match[3])));
+  if (Number.isNaN(date.getTime())) return null;
+  return new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "long", year: "numeric", timeZone: "UTC" }).format(date);
+}
+
+export function jobMeta(job: Pick<Job, "location" | "demo" | "postedAt" | "salaryMin" | "salaryMax" | "salaryPeriod" | "currency">): string {
+  return [job.location, listingDate(job.postedAt), job.demo ? "Sample" : "", salaryLabel(job)].filter(Boolean).join(" · ");
+}
+
 export function postedLabel(iso: string): string {
   const date = new Date(iso);
   const today = formatLongDate(new Date());
