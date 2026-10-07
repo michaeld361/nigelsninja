@@ -2,19 +2,27 @@
 
 import { useState, useTransition } from "react";
 import { addToApplyList, skipJob } from "@/app/actions";
-import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 
-export function JobActions({ jobId, allowSkip = true }: { jobId: string; allowSkip?: boolean }) {
+export function JobActions({
+  jobId,
+  allowSkip = true,
+  layout = "row",
+}: {
+  jobId: string;
+  allowSkip?: boolean;
+  layout?: "row" | "detail";
+}) {
   const [which, setWhich] = useState<"add" | "skip" | null>(null);
   const [pending, start] = useTransition();
+  const stacked = layout === "row";
 
   return (
-    <div className="flex flex-wrap items-center gap-3">
-      <Button
+    <div className={stacked ? "flex flex-col items-end gap-2 pt-1.5" : "flex flex-wrap items-center gap-2.5"}>
+      <button
         type="button"
         disabled={pending}
-        className="h-auto rounded-full px-5 py-2 font-serif text-base"
+        className={stacked ? "pill pill-sm whitespace-nowrap" : "pill"}
         onClick={() => {
           setWhich("add");
           start(async () => {
@@ -24,12 +32,12 @@ export function JobActions({ jobId, allowSkip = true }: { jobId: string; allowSk
         }}
       >
         {pending && which === "add" ? "Adding…" : "Add to apply list"}
-      </Button>
+      </button>
       {allowSkip ? (
-        <Button
+        <button
           type="button"
           disabled={pending}
-          className="h-auto rounded-full bg-[#8d3b36] px-5 py-2 font-serif text-base text-[#f7f3ec] hover:bg-[#7a322e]"
+          className={stacked ? "skip-link" : "pill pill-line"}
           onClick={() => {
             setWhich("skip");
             start(async () => {
@@ -39,7 +47,7 @@ export function JobActions({ jobId, allowSkip = true }: { jobId: string; allowSk
           }}
         >
           {pending && which === "skip" ? "Skipping…" : "Skip"}
-        </Button>
+        </button>
       ) : null}
     </div>
   );

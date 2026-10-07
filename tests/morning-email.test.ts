@@ -36,6 +36,9 @@ test("the morning email keeps the last day, flags a strong fit, and greys a skip
   assert.equal(email.subject, "Wednesday. Your roles from the last day");
   assert.match(email.html, /Wednesday/);
   assert.match(email.html, /Nigel/);
+  assert.match(email.html, /nigelsninja/);
+  assert.match(email.html, /#0E0F11/);
+  assert.match(email.html, /#FF6B5B/);
   assert.equal(email.html.includes("Old Role"), false);
   assert.equal(email.html.includes("Filtered Out"), false);
   assert.match(email.html, /https:\/\/example\.test\/jobs\/strong/);

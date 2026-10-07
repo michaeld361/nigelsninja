@@ -22,7 +22,7 @@ function escapeHtml(value: string): string {
 export async function sendEmail(to: string, subject: string, html: string): Promise<{ sent: boolean; error?: string }> {
   const key = process.env.RESEND_API_KEY;
   if (!key) return { sent: false, error: "RESEND_API_KEY is not set" };
-  const from = process.env.DIGEST_FROM || "Nigel Job Search <onboarding@resend.dev>";
+  const from = process.env.DIGEST_FROM || "nigelsninja <onboarding@resend.dev>";
   const response = await fetch("https://api.resend.com/emails", {
     method: "POST",
     headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },

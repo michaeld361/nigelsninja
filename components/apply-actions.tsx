@@ -21,7 +21,7 @@ export function ApplyActions({
       <button
         type="button"
         disabled={pending}
-        className="font-serif text-xl text-primary underline decoration-primary/30 underline-offset-8"
+        className="pill pill-sm"
         onClick={() =>
           start(async () => {
             const result = await retryApplyPack(jobId);

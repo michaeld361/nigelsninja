@@ -2,11 +2,11 @@ import Link from "next/link";
 
 export function MissingJob() {
   return (
-    <div className="rounded-2xl border border-dashed px-4 py-10">
-      <h1 className="font-serif text-2xl">That role is no longer here</h1>
-      <p className="mt-2 text-sm text-muted-foreground">It may have been cleared, or the link is out of date.</p>
-      <Link href="/jobs" className="mt-4 inline-block text-sm underline">
-        Back to Jobs
+    <div className="rise">
+      <h1 className="display text-[clamp(44px,6vw,72px)]">That role is no longer here</h1>
+      <p className="mt-6 max-w-[52ch] text-xl leading-[1.45] text-[rgba(242,241,236,0.7)]">It may have been cleared, or the link is out of date.</p>
+      <Link href="/jobs" className="eyebrow mt-8 inline-block tracking-[0.12em] hover:text-[#FF6B5B]">
+        ← Jobs
       </Link>
     </div>
   );

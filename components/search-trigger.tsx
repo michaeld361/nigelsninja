@@ -2,18 +2,17 @@
 
 import { useTransition } from "react";
 import { runLinkedInSearch } from "@/app/actions";
-import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 
 export function SearchTrigger() {
   const [pending, start] = useTransition();
 
   return (
-    <Button
+    <button
       type="button"
       disabled={pending}
       aria-busy={pending}
-      className="h-auto rounded-full px-5 py-2 font-serif text-base"
+      className="pill"
       onClick={() => {
         start(async () => {
           const result = await runLinkedInSearch();
@@ -22,6 +21,7 @@ export function SearchTrigger() {
       }}
     >
       {pending ? "Searching…" : "Run LinkedIn search"}
-    </Button>
+      <span className="font-mono text-[13px]">↻</span>
+    </button>
   );
 }

@@ -2,6 +2,7 @@ import { londonWeekday } from "@/lib/format";
 import { loadStore } from "@/lib/store";
 import { formatLongDate } from "@/lib/text";
 import type { FitAssessment, Job, Run, Store } from "@/lib/types";
+import { emailDocument, escapeHtml } from "./brand-email";
 import { sendEmail } from "./notify";
 
 export const MORNING_TO = "mail@michaeldown.co.uk";
@@ -101,60 +102,71 @@ function latestFits(fits: FitAssessment[]): Map<string, FitAssessment> {
 function render(input: { weekday: string; date: string; base: string; rows: Row[]; stats: MorningStats }): string {
   const strong = input.rows.filter((row) => row.ultra);
   const rest = input.rows.filter((row) => !row.ultra);
-  const blocks = [
-    paragraph(`Nigel, these are the roles that arrived since yesterday. Anything older is still on the site, and nothing has been sent for you.`),
-    strong.length ? heading("A strong fit") : "",
-    strong.length ? paragraph("These sit closest to your CV. No hard mismatch came up in the fit check.") : "",
-    strong.map((row) => jobBlock(row, input.base)).join(""),
-    rest.length ? heading(strong.length ? "Also new" : "New since yesterday") : "",
-    rest.map((row) => jobBlock(row, input.base)).join(""),
-    input.rows.length ? "" : paragraph("Nothing new arrived in the last day. The search is still running, and a good role will show up here when it does."),
-    heading("The last day"),
-    `<ul style="padding-left: 1.2rem; line-height: 1.6;">
-      <li>${input.stats.searched} ${noun(input.stats.searched, "listing", "listings")} searched</li>
-      <li>${input.stats.found} ${noun(input.stats.found, "role", "roles")} found</li>
-      <li>${input.stats.fresh} new</li>
-      <li>${input.stats.applied} went to your apply list</li>
-      <li>${input.stats.skipped} skipped</li>
-    </ul>`,
+  const stats = [
+    [String(input.stats.searched), `${noun(input.stats.searched, "listing", "listings")} searched`],
+    [String(input.stats.found), `${noun(input.stats.found, "role", "roles")} found`],
+    [String(input.stats.fresh), "new"],
+    [String(input.stats.applied), "on the apply list"],
+    [String(input.stats.skipped), "skipped"],
   ];
-  return `<div style="font-family: Georgia, 'Times New Roman', serif; color: #241f1c; max-width: 36rem; line-height: 1.5;">
-    <p style="margin: 0; color: #6b645e;">Jobs</p>
-    <h1 style="font-weight: normal; font-size: 32px; margin: 8px 0 0;">${escapeHtml(input.weekday)}</h1>
-    <p style="margin: 4px 0 24px; color: #6b645e;">${escapeHtml(input.date)}</p>
-    ${blocks.join("\n")}
-  </div>`;
+  const body = `
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#0E0F11;color:#F2F1EC;">
+    <tr>
+      <td style="padding:40px 32px 72px;font-family:'Hanken Grotesk',Georgia,sans-serif;">
+        <p style="margin:0;font-family:'Bricolage Grotesque',Georgia,sans-serif;font-weight:700;font-size:34px;line-height:1;letter-spacing:-.02em;color:#F2F1EC;">nigelsninja<span style="color:#FF6B5B;">.</span></p>
+        <p style="margin:10px 0 0;font-family:'Geist Mono',ui-monospace,monospace;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:rgba(242,241,236,.5);">Jobs · ${escapeHtml(input.date)}</p>
+        <h1 style="margin:14px 0 0;font-family:'Bricolage Grotesque',Georgia,sans-serif;font-weight:700;font-size:64px;line-height:.9;letter-spacing:-.03em;color:#F2F1EC;">${escapeHtml(input.weekday)}</h1>
+        <p style="margin:28px 0 0;max-width:42em;font-size:20px;line-height:1.45;color:rgba(242,241,236,.72);">Nigel, these are the roles that arrived since yesterday. Anything older is still on the site, and nothing has been sent for you.</p>
+        ${strong.length ? sectionLabel("A strong fit") : ""}
+        ${strong.length ? `<p style="margin:12px 0 0;font-size:17px;line-height:1.5;color:rgba(242,241,236,.72);">These sit closest to your CV. No hard mismatch came up in the fit check.</p>` : ""}
+        ${strong.map((row) => jobBlock(row, input.base)).join("")}
+        ${rest.length ? sectionLabel(strong.length ? "Also new" : "New since yesterday") : ""}
+        ${rest.map((row) => jobBlock(row, input.base)).join("")}
+        ${input.rows.length ? "" : `<p style="margin:40px 0 0;font-family:'Bricolage Grotesque',Georgia,sans-serif;font-weight:700;font-size:28px;font-style:italic;color:rgba(242,241,236,.5);">Nothing new arrived in the last day. The search is still running, and a good role will show up here when it does.</p>`}
+        ${sectionLabel("The last day")}
+        <table role="presentation" cellpadding="0" cellspacing="0" style="margin-top:8px;">
+          <tr>
+            ${stats
+              .map(
+                ([figure, label]) => `<td style="padding:0 28px 0 0;vertical-align:top;font-family:'Geist Mono',ui-monospace,monospace;font-size:11px;letter-spacing:.04em;color:rgba(242,241,236,.55);">
+              <span style="color:#F2F1EC;font-size:14px;">${escapeHtml(figure)}</span><br>${escapeHtml(label)}
+            </td>`,
+              )
+              .join("")}
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>`;
+  return emailDocument(body);
 }
 
 function jobBlock(row: Row, base: string): string {
-  const colour = row.skipped ? "#9a938c" : "#241f1c";
+  const colour = row.skipped ? "#9a938c" : "#F2F1EC";
   const href = `${base}/jobs/${row.job.id}`;
   const notes = [
     row.ultra ? "Strong fit" : "",
     row.onApplyList ? "On your apply list" : "",
     row.skipped ? "You skipped this" : "",
   ].filter(Boolean);
-  return `<p style="margin: 0 0 20px; color: ${colour};">
-    <a href="${escapeHtml(href)}" style="color: ${colour};">${escapeHtml(row.job.title)}</a><br>
-    ${escapeHtml(row.job.company)} · ${escapeHtml(row.job.location)}
-    ${notes.length ? `<br><span style="color: ${row.skipped ? "#9a938c" : "#6b645e"};">${escapeHtml(notes.join(" · "))}</span>` : ""}
-  </p>`;
+  const noteColour = row.skipped ? "#9a938c" : "rgba(242,241,236,.55)";
+  return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-top:28px;border-top:1px solid rgba(242,241,236,.12);">
+    <tr>
+      <td style="padding:22px 0 0;color: ${colour};">
+        <a href="${escapeHtml(href)}" style="font-family:'Bricolage Grotesque',Georgia,sans-serif;font-weight:700;font-size:28px;line-height:1.1;letter-spacing:-.02em;color: ${colour};text-decoration:none;">${escapeHtml(row.job.title)}</a>
+        <div style="margin-top:8px;font-size:18px;color: ${colour};">${escapeHtml(row.job.company)} · ${escapeHtml(row.job.location)}</div>
+        ${notes.length ? `<div style="margin-top:8px;font-family:'Geist Mono',ui-monospace,monospace;font-size:11px;letter-spacing:.04em;color:${noteColour};">${escapeHtml(notes.join(" · "))}</div>` : ""}
+      </td>
+    </tr>
+  </table>`;
 }
 
-function heading(text: string): string {
-  return `<h2 style="font-weight: normal; font-size: 22px; margin: 28px 0 8px;">${escapeHtml(text)}</h2>`;
-}
-
-function paragraph(text: string): string {
-  return `<p style="margin: 0 0 16px;">${escapeHtml(text)}</p>`;
+function sectionLabel(text: string): string {
+  return `<p style="margin:40px 0 0;font-family:'Geist Mono',ui-monospace,monospace;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:#FF6B5B;">${escapeHtml(text)}</p>`;
 }
 
 function noun(count: number, one: string, many: string): string {
   return count === 1 ? one : many;
-}
-
-function escapeHtml(value: string): string {
-  return value.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 }
 
 function publicError(message: string): string {

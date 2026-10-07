@@ -69,6 +69,55 @@ export function jobMeta(job: Pick<Job, "location" | "demo" | "postedAt" | "salar
   return [job.location, listingDate(job.postedAt), job.demo ? "Sample" : "", salaryLabel(job)].filter(Boolean).join(" · ");
 }
 
+export function listingDateShort(iso: string | null | undefined): string | null {
+  if (!iso?.trim()) return null;
+  const match = iso.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (!match) return null;
+  const date = new Date(Date.UTC(Number(match[1]), Number(match[2]) - 1, Number(match[3])));
+  if (Number.isNaN(date.getTime())) return null;
+  return new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" }).format(date);
+}
+
+export function londonDayMonth(date = new Date()): string {
+  return new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "short", timeZone: "Europe/London" }).format(date);
+}
+
+export type ListingBlock = { kind: "head"; text: string } | { kind: "para"; text: string } | { kind: "list"; items: string[] };
+
+export function listingBlocks(text: string): ListingBlock[] {
+  const chunks = text
+    .split(/\n{2,}/)
+    .map((chunk) => chunk.trim())
+    .filter(Boolean);
+  const blocks: ListingBlock[] = [];
+  const bullet = (line: string) => /^[-•*]\s+/.test(line) || /^\d+[.)]\s+/.test(line);
+  const clean = (line: string) => line.replace(/^[-•*]\s+|^\d+[.)]\s+/, "");
+  for (const chunk of chunks) {
+    const lines = chunk
+      .split(/\n/)
+      .map((line) => line.trim())
+      .filter(Boolean);
+    if (lines.length && lines.every(bullet)) {
+      blocks.push({ kind: "list", items: lines.map(clean) });
+      continue;
+    }
+    if (lines.length === 1 && lines[0].length < 72 && !/[.!?]$/.test(lines[0]) && !bullet(lines[0])) {
+      blocks.push({ kind: "head", text: lines[0] });
+      continue;
+    }
+    const prose: string[] = [];
+    const items: string[] = [];
+    for (const line of lines) {
+      if (bullet(line)) items.push(clean(line));
+      else prose.push(line);
+    }
+    if (prose.length) blocks.push({ kind: "para", text: prose.join(" ") });
+    if (items.length) blocks.push({ kind: "list", items });
+  }
+  if (!blocks.length && text.trim()) blocks.push({ kind: "para", text: text.trim() });
+  return blocks;
+}
+
 export function postedLabel(iso: string): string {
   const date = new Date(iso);
   const today = formatLongDate(new Date());

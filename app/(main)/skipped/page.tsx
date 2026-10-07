@@ -1,5 +1,6 @@
 import Link from "next/link";
-import { jobMeta } from "@/lib/format";
+import { RestoreJob } from "@/components/restore-job";
+import { listingDateShort, salaryLabel } from "@/lib/format";
 import { loadStore } from "@/lib/store";
 
 export default function SkippedPage() {
@@ -10,29 +11,44 @@ export default function SkippedPage() {
     .filter((job) => (live ? !job.demo : true))
     .sort((a, b) => b.statusChangedAt.localeCompare(a.statusChangedAt));
   return (
-    <div>
-      <Link href="/jobs" className="text-sm text-muted-foreground">
-        Jobs
+    <div className="rise">
+      <Link href="/jobs" className="eyebrow tracking-[0.12em] hover:text-[#FF6B5B]">
+        ← Jobs
       </Link>
-      <h1 className="mt-3 font-serif text-5xl tracking-tight">Skipped</h1>
-      <p className="mt-4 max-w-xl text-lg leading-8 text-muted-foreground">
+      <h1 className="display mt-6 text-[clamp(64px,9vw,112px)]">Skipped</h1>
+      <p className="mt-7 max-w-[52ch] text-xl leading-[1.45] text-[rgba(242,241,236,0.7)]">
         Roles you have set aside. They stay here if you want another look, and they do not sit on a pipeline.
       </p>
-      {jobs.length === 0 ? (
-        <p className="mt-16 max-w-xl font-serif text-3xl leading-snug tracking-tight">You have not set a role aside yet.</p>
-      ) : (
-        <ul className="mt-12">
-          {jobs.map((job) => (
-            <li key={job.id} className="border-t py-8">
-              <Link href={`/jobs/${job.id}`} className="block">
-                <h2 className="font-serif text-3xl tracking-tight">{job.title}</h2>
-                <p className="mt-1 text-lg">{job.company}</p>
-                <p className="mt-2 text-sm text-muted-foreground">{jobMeta(job)}</p>
-              </Link>
-            </li>
-          ))}
-        </ul>
-      )}
+      <div className="mt-12 border-t border-[#F2F1EC]">
+        {jobs.length === 0 ? (
+          <div className="py-14 font-[family-name:var(--font-display)] text-[28px] font-bold text-[rgba(242,241,236,0.5)] italic">
+            You have not set a role aside yet.
+          </div>
+        ) : (
+          jobs.map((job, index) => {
+            const date = listingDateShort(job.postedAt);
+            return (
+              <article key={job.id} className="grid grid-cols-1 items-start gap-4 border-b border-[rgba(242,241,236,0.12)] py-[30px] sm:grid-cols-[48px_minmax(0,1fr)_auto] sm:gap-5">
+                <div className="pt-3 font-mono text-xs text-[rgba(242,241,236,0.45)]">{String(index + 1).padStart(2, "0")}</div>
+                <div className="min-w-0">
+                  <Link
+                    href={`/jobs/${job.id}`}
+                    className="font-[family-name:var(--font-display)] text-[30px] leading-[1.1] font-bold tracking-[-0.02em] text-[rgba(242,241,236,0.6)] hover:text-[#FF6B5B]"
+                  >
+                    {job.title}
+                  </Link>
+                  <div className="mt-2 text-[19px]">{job.company}</div>
+                  <div className="mt-2.5 font-mono text-[11.5px] text-[rgba(242,241,236,0.55)]">
+                    {job.location}
+                    {date ? ` · ${date}` : ""} · {salaryLabel(job)}
+                  </div>
+                </div>
+                <RestoreJob jobId={job.id} />
+              </article>
+            );
+          })
+        )}
+      </div>
     </div>
   );
 }

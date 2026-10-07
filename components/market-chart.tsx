@@ -2,30 +2,40 @@ import type { MarketPoint } from "@/lib/market";
 
 export function MarketChart({ points }: { points: MarketPoint[] }) {
   if (!points.length) {
-    return <p className="mt-8 max-w-xl text-base leading-8">The chart starts when a search finishes.</p>;
+    return <p className="text-[15px] leading-6 text-[rgba(242,241,236,0.6)]">The chart starts when a search finishes.</p>;
   }
-  const width = 640;
+  const width = 600;
   const height = 220;
-  const pad = { left: 28, right: 12, top: 16, bottom: 28 };
   const max = Math.max(1, ...points.map((point) => point.found));
-  const innerW = width - pad.left - pad.right;
-  const innerH = height - pad.top - pad.bottom;
-  const x = (index: number) => (points.length === 1 ? pad.left + innerW / 2 : pad.left + (index / (points.length - 1)) * innerW);
-  const y = (value: number) => pad.top + innerH - (value / max) * innerH;
-  const line = points.map((point, index) => `${index === 0 ? "M" : "L"} ${x(index).toFixed(1)} ${y(point.found).toFixed(1)}`).join(" ");
+  const x = (index: number) => (points.length === 1 ? width / 2 : 20 + (index / (points.length - 1)) * (width - 40));
+  const y = (value: number) => 200 - (value / max) * 180;
+  const line = points.map((point, index) => `${index === 0 ? "M" : "L"}${x(index).toFixed(1)} ${y(point.found).toFixed(1)}`).join(" ");
+  const area = `${line} L${x(points.length - 1).toFixed(1)} 200 L${x(0).toFixed(1)} 200 Z`;
   return (
-    <svg viewBox={`0 0 ${width} ${height}`} className="mt-8 w-full text-foreground" role="img" aria-label="Relevant roles found on each LinkedIn search">
-      <line x1={pad.left} y1={pad.top} x2={pad.left} y2={height - pad.bottom} stroke="currentColor" strokeOpacity="0.2" />
-      <line x1={pad.left} y1={height - pad.bottom} x2={width - pad.right} y2={height - pad.bottom} stroke="currentColor" strokeOpacity="0.2" />
-      <path d={line} fill="none" stroke="currentColor" strokeWidth="1.5" />
-      {points.map((point, index) => (
-        <g key={point.at}>
-          <circle cx={x(index)} cy={y(point.found)} r="4" fill="currentColor" />
-          <text x={x(index)} y={y(point.found) - 10} textAnchor="middle" fill="currentColor" fontSize="12">
-            {point.found}
-          </text>
-        </g>
-      ))}
-    </svg>
+    <div>
+      <svg viewBox={`0 0 ${width} ${height}`} className="block h-auto w-full overflow-visible" role="img" aria-label="Relevant roles found on each LinkedIn search">
+        <line x1="0" y1="200" x2="600" y2="200" stroke="rgba(242,241,236,.2)" />
+        <line x1="0" y1="100" x2="600" y2="100" stroke="rgba(242,241,236,.08)" strokeDasharray="2 4" />
+        <line x1="0" y1="0" x2="600" y2="0" stroke="rgba(242,241,236,.08)" strokeDasharray="2 4" />
+        <path d={area} fill="rgba(255,107,91,.08)" />
+        <path d={line} fill="none" stroke="#F2F1EC" strokeWidth="1.5" strokeDasharray="1200" style={{ animation: "draw 1.6s cubic-bezier(.2,.8,.2,1) .2s both" }} />
+        {points.map((point, index) => (
+          <g key={point.at}>
+            <circle cx={x(index)} cy={y(point.found)} r="5" fill={index === 0 ? "#FF6B5B" : "#F2F1EC"} />
+            <text x={x(index)} y={Math.max(12, y(point.found) - 12)} textAnchor="middle" fill={index === 0 ? "#FF6B5B" : "#F2F1EC"} fontFamily="Geist Mono, ui-monospace, monospace" fontSize="13">
+              {point.found}
+            </text>
+          </g>
+        ))}
+      </svg>
+      <div className="mt-3.5 grid font-mono text-[11px] tracking-[0.02em] text-[rgba(242,241,236,0.55)]" style={{ gridTemplateColumns: `repeat(${points.length}, minmax(0, 1fr))` }}>
+        {points.map((point) => (
+          <div key={point.at} className="text-center">
+            <div className="text-[#F2F1EC]">{point.label}</div>
+            <div className="mt-1">{point.searched} searched</div>
+          </div>
+        ))}
+      </div>
+    </div>
   );
 }

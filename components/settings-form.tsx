@@ -2,7 +2,6 @@
 
 import { useState, useTransition } from "react";
 import { deleteAllData, saveSettings, signOutEverywhere, uploadCv } from "@/app/actions";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -14,16 +13,17 @@ export function SettingsForm({ profile, settings, files }: { profile: Profile; s
   const [message, setMessage] = useState<string | null>(null);
 
   return (
-    <div className="space-y-8">
+    <div className="rise space-y-14">
       <div>
-        <h1 className="font-serif text-3xl tracking-tight">Your profile</h1>
-        <p className="mt-2 text-sm text-muted-foreground">
+        <div className="eyebrow">Profile</div>
+        <h1 className="display mt-3.5 text-[clamp(64px,9vw,112px)]">Settings</h1>
+        <p className="mt-7 max-w-[52ch] text-xl leading-[1.45] text-[rgba(242,241,236,0.7)]">
           {profile.headline}. {profile.addressLines.join(", ")}. {profile.phone}. {profile.email}. A change to the search is picked up on the next LinkedIn look.
         </p>
       </div>
 
       <form
-        className="space-y-4 rounded-2xl border p-4"
+        className="space-y-4 border-t border-[#F2F1EC] pt-6"
         onSubmit={(event) => {
           event.preventDefault();
           const data = new FormData(event.currentTarget);
@@ -34,12 +34,12 @@ export function SettingsForm({ profile, settings, files }: { profile: Profile; s
           });
         }}
       >
-        <h2 className="font-medium">CV, version {profile.cvVersion || "none"}</h2>
+        <h2 className="font-[family-name:var(--font-display)] text-2xl font-bold tracking-[-0.01em]">CV, version {profile.cvVersion || "none"}</h2>
         <p className="text-sm text-muted-foreground">Upload a replacement .docx under 5 MB. Letters record which version they used. Earlier text stays in the history.</p>
         <Input name="cv" type="file" accept=".docx,.pdf" />
-        <Button type="submit" disabled={pending} size="sm">
+        <button type="submit" disabled={pending} className="pill pill-sm">
           Upload CV
-        </Button>
+        </button>
         {profile.cvHistory.length ? (
           <ul className="text-xs text-muted-foreground">
             {profile.cvHistory.map((item) => (
@@ -64,8 +64,8 @@ export function SettingsForm({ profile, settings, files }: { profile: Profile; s
           });
         }}
       >
-        <section className="space-y-3 rounded-2xl border p-4">
-          <h2 className="font-medium">Profile text</h2>
+        <section className="space-y-3 border-t border-[#F2F1EC] pt-6">
+          <h2 className="font-[family-name:var(--font-display)] text-2xl font-bold tracking-[-0.01em]">Profile text</h2>
           <label className="block text-sm">
             LinkedIn summary
             <Textarea name="linkedin" className="mt-1 min-h-40" defaultValue={profile.linkedinSummary} />
@@ -76,8 +76,8 @@ export function SettingsForm({ profile, settings, files }: { profile: Profile; s
           </label>
         </section>
 
-        <section className="space-y-4 rounded-2xl border p-4">
-          <h2 className="font-medium">Search</h2>
+        <section className="space-y-4 border-t border-[#F2F1EC] pt-6">
+          <h2 className="font-[family-name:var(--font-display)] text-2xl font-bold tracking-[-0.01em]">Search</h2>
           {settings.tiers.map((tier) => (
             <div key={tier.id} className="space-y-2">
               <label className="flex items-center gap-2 text-sm">
@@ -112,8 +112,8 @@ export function SettingsForm({ profile, settings, files }: { profile: Profile; s
           </label>
         </section>
 
-        <section className="space-y-3 rounded-2xl border p-4">
-          <h2 className="font-medium">Letters</h2>
+        <section className="space-y-3 border-t border-[#F2F1EC] pt-6">
+          <h2 className="font-[family-name:var(--font-display)] text-2xl font-bold tracking-[-0.01em]">Letters</h2>
           <label className="block text-sm">
             Standing notes, applied to every letter
             <Textarea name="standing" className="mt-1 min-h-28" defaultValue={settings.standingNotes} />
@@ -135,14 +135,14 @@ export function SettingsForm({ profile, settings, files }: { profile: Profile; s
             <Input name="ceiling" type="number" className="mt-1 max-w-32" defaultValue={settings.monthlySpendCeilingUsd} />
           </label>
         </section>
-        <Button type="submit" disabled={pending}>
+        <button type="submit" disabled={pending} className="pill">
           {pending ? "Saving…" : "Save settings"}
-        </Button>
+        </button>
         {message ? <p className="text-sm text-muted-foreground">{message}</p> : null}
       </form>
 
-      <section className="space-y-2 rounded-2xl border p-4">
-        <h2 className="font-medium">Certificates</h2>
+      <section className="space-y-2 border-t border-[#F2F1EC] pt-6">
+        <h2 className="font-[family-name:var(--font-display)] text-2xl font-bold tracking-[-0.01em]">Certificates</h2>
         <p className="text-sm text-muted-foreground">CIPP/E, CIPM and AIGP scans, stored so you can attach them when a form asks for proof.</p>
         <ul className="text-sm">
           {files.filter((file) => file.kind === "certificate").map((file) => (
@@ -154,8 +154,8 @@ export function SettingsForm({ profile, settings, files }: { profile: Profile; s
         </ul>
       </section>
 
-      <section className="space-y-3 rounded-2xl border p-4">
-        <h2 className="font-medium">Session and data</h2>
+      <section className="space-y-3 border-t border-[#F2F1EC] pt-6">
+        <h2 className="font-[family-name:var(--font-display)] text-2xl font-bold tracking-[-0.01em]">Session and data</h2>
         <form
           onSubmit={(event) => {
             event.preventDefault();
@@ -164,7 +164,7 @@ export function SettingsForm({ profile, settings, files }: { profile: Profile; s
             });
           }}
         >
-          <Button type="submit" variant="outline" size="sm">Sign out everywhere</Button>
+          <button type="submit" className="pill pill-line pill-sm">Sign out everywhere</button>
         </form>
         <form
           className="space-y-2"
@@ -181,7 +181,7 @@ export function SettingsForm({ profile, settings, files }: { profile: Profile; s
           <Label htmlFor="confirm">Delete all my data</Label>
           <p className="text-xs text-muted-foreground">Removes roles, letters, the CV text and uploaded files. The allow-list stays so you can still sign in. Type DELETE.</p>
           <Input id="confirm" name="confirm" placeholder="DELETE" />
-          <Button type="submit" variant="destructive" size="sm" disabled={pending}>Delete everything</Button>
+          <button type="submit" className="pill pill-sm" disabled={pending} style={{ background: "#B3261E", borderColor: "#B3261E", color: "#F2F1EC" }}>Delete everything</button>
         </form>
       </section>
     </div>

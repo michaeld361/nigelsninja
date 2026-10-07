@@ -44,11 +44,9 @@ export async function signInWithEmail(formData: FormData): Promise<ActionResult>
   const base = (process.env.APP_URL || "").replace(/\/$/, "");
   if (!base) return { ok: true, link, message: "APP_URL is not set, so the email was not sent." };
   const { sendEmail } = await import("@/pipeline/notify");
-  const sent = await sendEmail(
-    user.email,
-    "Sign in to Nigel Job Search",
-    `<p><a href="${base}${link}">Sign in</a></p>`,
-  );
+  const { magicLinkEmail } = await import("@/pipeline/brand-email");
+  const mail = magicLinkEmail(`${base}${link}`);
+  const sent = await sendEmail(user.email, mail.subject, mail.html);
   if (sent.sent) return { ok: true, message: `A sign-in link was sent to ${user.email}.` };
   return { ok: true, link, message: sent.error || "The email was not sent." };
 }
@@ -385,6 +383,25 @@ export async function retryLetters(): Promise<ActionResult> {
   for (const job of pending) await regenerateLetter(job.id);
   revalidatePath("/admin");
   return { ok: true, message: pending.length ? `Drafted ${pending.length} letter${pending.length === 1 ? "" : "s"}.` : "No failed letters to retry." };
+}
+
+export async function restoreJob(jobId: string): Promise<ActionResult> {
+  const session = await actor();
+  if (!session) return { ok: false, message: "Sign in again." };
+  const missing = updateStore((store) => {
+    const job = store.jobs.find((item) => item.id === jobId);
+    if (!job) return true;
+    const from = job.status;
+    job.status = "new";
+    job.statusChangedAt = new Date().toISOString();
+    store.statusEvents.push({ id: crypto.randomUUID(), jobId, from, to: "new", at: job.statusChangedAt, by: session.email });
+    return false;
+  });
+  if (missing) return { ok: false, message: "That role is not in the queue." };
+  revalidatePath("/jobs");
+  revalidatePath("/skipped");
+  revalidatePath(`/jobs/${jobId}`);
+  redirect("/jobs");
 }
 
 export async function skipJob(jobId: string): Promise<ActionResult> {

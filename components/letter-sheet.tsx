@@ -9,61 +9,59 @@ export function LetterSheet({ letter, letterId }: { letter: FormalLetter; letter
 
   return (
     <section>
-      <div className="flex items-baseline justify-between gap-6">
-        <h2 className="font-serif text-3xl tracking-tight">Letter</h2>
-        <button
-          type="button"
-          className="font-serif text-xl text-primary underline decoration-primary/30 underline-offset-8"
-          onClick={async () => {
-            try {
-              await navigator.clipboard.writeText(letter.plain);
-              setCopied(true);
-              toast.success("Letter copied");
-            } catch {
-              toast.error("Could not copy the letter.");
-            }
-          }}
-        >
-          {copied ? "Copied" : "Copy letter"}
-        </button>
+      <div className="mt-7 flex flex-wrap items-center justify-between gap-3">
+        <div className="text-base text-[rgba(242,241,236,0.6)]">Drafted with AI help; reviewed and edited by Nigel.</div>
+        <div className="flex gap-2">
+          <button
+            type="button"
+            className="pill pill-sm"
+            onClick={async () => {
+              try {
+                await navigator.clipboard.writeText(letter.plain);
+                setCopied(true);
+                toast.success("Letter copied");
+              } catch {
+                toast.error("Could not copy the letter.");
+              }
+            }}
+          >
+            {copied ? "Copied" : "Copy letter"}
+          </button>
+          {letterId ? (
+            <a className="pill pill-line pill-sm" href={`/api/letters/${letterId}/docx`}>
+              Download .docx
+            </a>
+          ) : null}
+        </div>
       </div>
-      <article className="mt-6 bg-white px-8 py-10 text-[#2c261f] shadow-[0_1px_2px_rgba(42,36,28,0.04)] ring-1 ring-black/5 sm:px-12 sm:py-14">
-        <div className="text-sm leading-6">
-          {letter.sender.map((line, index) => (
-            <p key={`${index}-${line}`} className={index === 0 ? "text-base" : undefined}>
-              {line}
-            </p>
+      <article className="mt-6 box-border max-w-[640px] border border-[rgba(242,241,236,0.1)] bg-[#16181B] px-[clamp(32px,6vw,64px)] py-[clamp(32px,6vw,64px)] text-[16.5px] leading-[1.55] text-[#F2F1EC]">
+        <div className="font-mono text-[11.5px] leading-[1.7] text-[rgba(242,241,236,0.65)]">
+          {letter.sender.map((line) => (
+            <div key={line}>{line}</div>
           ))}
         </div>
-        <p className="mt-10">{letter.date}</p>
+        <div className="mt-7 font-mono text-[11.5px] text-[rgba(242,241,236,0.65)]">{letter.date}</div>
         {letter.recipient.length ? (
-          <div className="mt-10 leading-7">
+          <div className="mt-7">
             {letter.recipient.map((line) => (
-              <p key={line}>{line}</p>
+              <div key={line}>{line}</div>
             ))}
           </div>
         ) : null}
-        <p className="mt-10">
-          <span className="block text-xs tracking-wide text-[#6f675d]">Suggested subject</span>
-          <span className="mt-1 block">{letter.subject}</span>
-        </p>
-        <p className="mt-10">{letter.salutation}</p>
-        <div className="mt-6 space-y-5 leading-7">
+        <div className="mt-5 font-mono text-[10.5px] tracking-[0.12em] text-[rgba(242,241,236,0.5)] uppercase">Suggested subject</div>
+        <div className="mt-1">{letter.subject}</div>
+        <div className="mt-7">{letter.salutation}</div>
+        <div className="mt-4 flex flex-col gap-4">
           {letter.paragraphs.map((paragraph, index) => (
-            <p key={index}>{paragraph}</p>
+            <p key={index} className="m-0">
+              {paragraph}
+            </p>
           ))}
         </div>
-        <p className="mt-10">{letter.signOff}</p>
-        <p className="mt-8">{letter.signature}</p>
-        {letter.disclaimer ? <p className="mt-12 text-sm leading-6 text-[#6f675d]">{letter.disclaimer}</p> : null}
+        <div className="mt-7">{letter.signOff}</div>
+        <div className="mt-5 font-[family-name:var(--font-display)] text-[28px] font-bold">{letter.signature}</div>
+        {letter.disclaimer ? <div className="mt-9 text-[12.5px] leading-[1.5] text-[rgba(242,241,236,0.5)]">{letter.disclaimer}</div> : null}
       </article>
-      {letterId ? (
-        <p className="mt-4 text-sm">
-          <a className="underline decoration-foreground/30 underline-offset-4" href={`/api/letters/${letterId}/docx`}>
-            Download .docx
-          </a>
-        </p>
-      ) : null}
     </section>
   );
 }

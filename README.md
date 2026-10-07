@@ -1,6 +1,6 @@
-# Nigel Job Search
+# nigelsninja
 
-A private LinkedIn job list for Nigel Down. He adds a role to his apply list, and the app drafts a cover letter, how to apply, a contact, and a short note on the company. He sends the application himself. The app never submits one.
+A private LinkedIn job list for Nigel Down. He adds a role to his apply list, and the app drafts a cover letter, how to apply, a contact, and a short note on the company. He sends the application himself. The app never submits one. The product name is nigelsninja.
 
 ## Run it locally
 
