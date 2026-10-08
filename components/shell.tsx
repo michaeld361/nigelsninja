@@ -23,7 +23,7 @@ export function Shell({
 }) {
   const pathname = usePathname();
   return (
-    <div className="min-h-screen bg-[#0E0F11] text-[#F2F1EC] max-md:overflow-x-clip md:grid md:grid-cols-[minmax(200px,240px)_minmax(0,1fr)]">
+    <div className="min-h-screen bg-transparent text-[#F2F1EC] max-md:overflow-x-clip md:grid md:grid-cols-[minmax(200px,240px)_minmax(0,1fr)]">
       <aside className="box-border flex flex-col justify-between gap-8 border-b border-[rgba(242,241,236,0.1)] px-5 py-5 md:sticky md:top-0 md:h-screen md:gap-10 md:border-r md:border-b-0 md:px-8 md:py-10">
         <div className="flex flex-col gap-6 md:gap-11">
           <Link href="/jobs">

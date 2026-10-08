@@ -123,8 +123,8 @@
     @apply border-border outline-ring/50;
   }
   body {
-    @apply bg-background text-foreground;
-    background: #0e0f11;
+    @apply bg-transparent text-foreground;
+    background: transparent;
     color: #f2f1ec;
   }
   html {

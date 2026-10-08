@@ -10,7 +10,7 @@ export function LoginForm({ today }: { today: string }) {
   const [pending, start] = useTransition();
 
   return (
-    <div className="relative grid min-h-screen overflow-hidden bg-[#0E0F11] text-[#F2F1EC] lg:grid-cols-2">
+    <div className="relative grid min-h-screen overflow-hidden bg-transparent text-[#F2F1EC] lg:grid-cols-2">
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_60%_50%_at_70%_110%,rgba(255,107,91,0.14),transparent_70%)]" />
       <div className="relative flex flex-col justify-between px-5 py-8 sm:px-8 sm:py-10 md:px-12 md:py-12" style={{ animation: "fade .9s ease both" }}>
         <div className="eyebrow">Private · Privacy search</div>

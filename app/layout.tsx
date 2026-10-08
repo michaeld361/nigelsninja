@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Bricolage_Grotesque, Geist_Mono, Hanken_Grotesk } from "next/font/google";
+import { PageFieldLoader } from "@/components/page-field-loader";
 import { Toaster } from "@/components/ui/sonner";
 import { ThemeProvider } from "@/components/theme-provider";
 import "./globals.css";
@@ -31,10 +32,11 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en-GB" className={`${sans.variable} ${display.variable} ${mono.variable} h-full antialiased`} suppressHydrationWarning>
-      <body className="min-h-full bg-[#0E0F11] text-[#F2F1EC]">
+      <body className="min-h-full bg-transparent text-[#F2F1EC]">
         <style>{`html[lang]{--font-bricolage:"Bricolage Grotesque";--font-hanken:"Hanken Grotesk";--font-geist:"Geist Mono"}`}</style>
+        <PageFieldLoader />
         <ThemeProvider>
-          {children}
+          <div className="relative z-10">{children}</div>
           <Toaster />
         </ThemeProvider>
       </body>
