@@ -1,13 +1,12 @@
 import Link from "next/link";
 import { JobActions } from "@/components/job-actions";
-import { JobsSummary } from "@/components/jobs-summary";
+import { JobsVisitLine } from "@/components/jobs-visit-line";
 import { SearchTrigger } from "@/components/search-trigger";
 import { listingDateShort, londonDayMonth, londonWeekday, salaryLabel } from "@/lib/format";
 import { formatClock } from "@/lib/text";
 import { loadStore } from "@/lib/store";
 import type { Job, Run } from "@/lib/types";
 import { practisingQualificationReason } from "@/pipeline/prefilter";
-import { expectedSearchLoad } from "@/pipeline/search-plan";
 
 export const maxDuration = 300;
 
@@ -52,10 +51,7 @@ export default function JobsPage() {
           worth a look
         </div>
       </div>
-      {jobs.length ? (
-        <JobsSummary jobs={jobs.map((job) => ({ id: job.id, title: job.title, location: job.location }))} />
-      ) : null}
-      <SearchCost phrases={store.settings.tiers.filter((tier) => tier.enabled).flatMap((tier) => tier.phrases).length} places={store.settings.locations.length} />
+      <JobsVisitLine />
       {sample ? (
         <p className="mt-6 max-w-[52ch] text-[15px] leading-6 text-[rgba(242,241,236,0.55)]">
           These are sample listings, so you can see how the page feels. Live LinkedIn roles appear once Apify is connected.
@@ -92,15 +88,6 @@ export default function JobsPage() {
         Skipped ({skipped}) →
       </Link>
     </div>
-  );
-}
-
-function SearchCost({ phrases, places }: { phrases: number; places: number }) {
-  const load = expectedSearchLoad(phrases, places);
-  return (
-    <p className="mt-4 max-w-[56ch] text-[15px] leading-6 text-[rgba(242,241,236,0.5)]">
-      {`${load.phrases} phrases across ${load.locations} ${load.locations === 1 ? "place" : "places"}, each pair its own search, up to 200 rows. A two-hour run stops at $${load.steadyCapUsd}. A seven-day catch-up stops at $${load.backfillCapUsd}. At $1.25 per 1,000 roles, twelve full searches would be about $${load.usdPerDay}, past the $19 Starter credit.`}
-    </p>
   );
 }
 

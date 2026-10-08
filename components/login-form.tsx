@@ -11,7 +11,6 @@ export function LoginForm({ today }: { today: string }) {
 
   return (
     <div className="relative grid min-h-screen overflow-hidden bg-transparent text-[#F2F1EC] lg:grid-cols-2">
-      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_75%_60%_at_18%_46%,rgba(14,15,17,0.72),transparent_70%),radial-gradient(ellipse_68%_70%_at_80%_52%,rgba(14,15,17,0.66),transparent_72%)]" />
       <div className="relative flex min-w-0 flex-col justify-between px-5 py-8 sm:px-8 sm:py-10 md:px-12 md:py-12" style={{ animation: "fade .9s ease both" }}>
         <div className="eyebrow">Private · Privacy search</div>
         <div className="@container min-w-0 py-10 sm:py-16">

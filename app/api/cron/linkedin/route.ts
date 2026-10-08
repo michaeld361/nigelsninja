@@ -2,7 +2,7 @@ import { cronAuthorized, redactSecrets } from "@/lib/cron-auth";
 import { runPipeline } from "@/pipeline/run";
 
 export const runtime = "nodejs";
-export const maxDuration = 300;
+export const maxDuration = 900;
 
 export async function POST(request: Request) {
   if (!cronAuthorized(request)) return Response.json({ ok: false }, { status: 401 });
