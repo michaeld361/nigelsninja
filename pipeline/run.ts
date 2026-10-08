@@ -1,3 +1,4 @@
+import { RUN_LOCK_MS } from "@/lib/cron-wait";
 import { RUN_CAPS } from "@/lib/defaults";
 import { loadStore, updateStore } from "@/lib/store";
 import { statedContract } from "@/lib/text";
@@ -51,7 +52,7 @@ export async function runPipeline(options: {
   const started = new Date();
   const locked = updateStore((store) => {
     if (store.runLock && new Date(store.runLock.until).getTime() > Date.now()) return false;
-    store.runLock = { until: new Date(Date.now() + 20 * 60 * 1000).toISOString(), owner: options.by };
+    store.runLock = { until: new Date(Date.now() + RUN_LOCK_MS).toISOString(), owner: options.by };
     return true;
   });
   if (!locked) return { ok: false, message: "A run is already in progress." };
@@ -111,6 +112,7 @@ export async function runPipeline(options: {
       result.jobs.forEach((_, index) => candidates.push({ result, rawIndex: index }));
     }
 
+    console.log(JSON.stringify({ event: "pipeline-score", candidates: candidates.length, lookbackHours }));
     const profile = profileBlock(snapshot);
     for (const waiting of snapshot.jobs.filter((job) => job.status === "unscored")) {
       if (scored >= RUN_CAPS.scored) break;
