@@ -8,19 +8,7 @@ export function normaliseRaw(raw: RawJob, now = new Date().toISOString()): Omit<
   const pattern = raw.workPattern
     ? { workPattern: raw.workPattern, hybridDays: raw.hybridDays ?? null }
     : inferWorkPattern(blob);
-  const salary = {
-    salaryMin: raw.salaryMin ?? null,
-    salaryMax: raw.salaryMax ?? null,
-    salaryPeriod: raw.salaryPeriod ?? null,
-    currency: raw.currency ?? null,
-  };
-  if (salary.salaryMin == null && salary.salaryMax == null) {
-    const parsed = parseSalary(raw.description);
-    salary.salaryMin = parsed.salaryMin;
-    salary.salaryMax = parsed.salaryMax;
-    salary.salaryPeriod = parsed.salaryPeriod;
-    salary.currency = parsed.currency;
-  }
+  const salary = parseSalary(raw.description);
   const contractType = raw.contractType ?? inferContract(`${raw.title}\n${raw.description}`);
   const workPattern: WorkPattern = pattern.workPattern;
   return {

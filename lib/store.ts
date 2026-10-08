@@ -1,6 +1,7 @@
 import fs from "fs";
 import path from "path";
 import { defaultSettings } from "./defaults";
+import { groundStoredPay } from "./salary";
 import type { Store } from "./types";
 
 export function dataDir(): string {
@@ -80,6 +81,9 @@ function normalise(store: Store): Store {
     if (!pack.companySources) pack.companySources = [];
     if (!pack.lookingFor) pack.lookingFor = [];
   }
+  if (!store.jobs) store.jobs = [];
+  if (!store.fitAssessments) store.fitAssessments = [];
+  groundStoredPay(store);
   return store;
 }
 

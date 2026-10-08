@@ -134,11 +134,10 @@ export function parseSalary(text: string): {
   while ((match = re.exec(text))) {
     let value = Number(match[1].replace(/,/g, ""));
     if (match[2]) value *= 1000;
-    if (period === "year" && value < 1000) value *= 1000;
     amounts.push(value);
   }
   if (!amounts.length) {
-    return { salaryMin: null, salaryMax: null, salaryPeriod: period, currency };
+    return { salaryMin: null, salaryMax: null, salaryPeriod: null, currency: null };
   }
   return {
     salaryMin: Math.min(...amounts),

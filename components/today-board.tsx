@@ -137,7 +137,7 @@ function JobCard({
           </div>
           <p className="text-sm">{card.company}</p>
           <p className="mt-1 text-sm text-muted-foreground">
-            {card.location} · {card.pattern} · {card.contract} · {card.salary}
+            {[card.location, card.pattern, card.contract, card.salary].filter(Boolean).join(" · ")}
           </p>
           <p className="mt-1 text-xs text-muted-foreground">
             {card.sources.map((source, sourceIndex) => (

@@ -80,9 +80,10 @@ export async function finishApplyPack(jobId: string): Promise<void> {
           },
           store.settings,
         );
-    const composed = await compose(job, score, store.settings, store.profile, weighingText(store.notes, store.learnings));
+    const weighing = weighingText(store.notes, store.learnings);
+    const composed = await compose(job, score, store.settings, store.profile, weighing);
     const sections = await researchSections(job);
-    const lookingFor = await buildSpecAnalysis(job, store.profile);
+    const lookingFor = await buildSpecAnalysis(job, store.profile, weighing);
     const letter = toLetter(job, composed.draft, store);
     letter.cvVersion = store.profile.cvVersion || 1;
     updateStore((next) => {

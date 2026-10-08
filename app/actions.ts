@@ -43,14 +43,18 @@ export async function signInWithEmail(formData: FormData): Promise<ActionResult>
   });
   const link = `/login/consume?token=${token}`;
   if (!process.env.RESEND_API_KEY) return { ok: true, link };
-  const base = (process.env.APP_URL || "").replace(/\/$/, "");
-  if (!base) return { ok: true, link, message: "APP_URL is not set, so the email was not sent." };
-  const { sendEmail } = await import("@/pipeline/notify");
-  const { magicLinkEmail } = await import("@/pipeline/brand-email");
-  const mail = magicLinkEmail(`${base}${link}`);
-  const sent = await sendEmail(user.email, mail.subject, mail.html);
-  if (sent.sent) return { ok: true, message: `The sign-in link is on its way to ${user.email}.` };
-  return { ok: true, link, message: sent.error || "The email was not sent." };
+  const base = (process.env.APP_URL || process.env.RENDER_EXTERNAL_URL || "").replace(/\/$/, "");
+  if (!base || /127\.0\.0\.1|localhost/i.test(base)) return { ok: true, link, message: "The email was not sent." };
+  try {
+    const { sendEmail } = await import("@/pipeline/notify");
+    const { magicLinkEmail } = await import("@/pipeline/brand-email");
+    const mail = magicLinkEmail(`${base}${link}`);
+    const sent = await sendEmail(user.email, mail.subject, mail.html);
+    if (sent.sent && sent.id) return { ok: true, message: `The sign-in link is on its way to ${user.email}.` };
+    return { ok: true, link, message: sent.error || "The email was not sent." };
+  } catch {
+    return { ok: true, link, message: "The email was not sent." };
+  }
 }
 
 export async function consumeMagicLink(token: string) {
@@ -611,6 +615,24 @@ export async function addToApplyList(jobId: string): Promise<ActionResult> {
   revalidatePath("/jobs");
   revalidatePath("/apply");
   redirect(`/apply/${jobId}`);
+}
+
+export async function regenerateApplyPack(jobId: string): Promise<ActionResult> {
+  const session = await actor();
+  if (!session) return { ok: false, message: "Sign in again." };
+  const outcome = updateStore((store) => {
+    const row = store.applyPacks.find((item) => item.jobId === jobId);
+    if (!row) return "missing" as const;
+    if (row.state === "preparing") return "busy" as const;
+    row.state = "preparing";
+    row.error = null;
+    row.readyAt = null;
+    return "started" as const;
+  });
+  if (outcome === "missing") return { ok: false, message: "That role is not on the apply list." };
+  if (outcome === "started") after(() => finishApplyPack(jobId));
+  revalidatePath(`/apply/${jobId}`);
+  return { ok: true };
 }
 
 export async function retryApplyPack(jobId: string): Promise<ActionResult> {

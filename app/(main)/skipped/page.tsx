@@ -40,7 +40,8 @@ export default function SkippedPage() {
                   <div className="mt-2 text-[19px]">{job.company}</div>
                   <div className="mt-2.5 font-mono text-[11.5px] text-[rgba(242,241,236,0.55)]">
                     {job.location}
-                    {date ? ` · ${date}` : ""} · {salaryLabel(job)}
+                    {date ? ` · ${date}` : ""}
+                    {salaryLabel(job) ? ` · ${salaryLabel(job)}` : ""}
                   </div>
                 </div>
                 <div className="col-start-2 min-w-0 sm:col-start-auto">

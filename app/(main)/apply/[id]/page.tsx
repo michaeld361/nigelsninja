@@ -5,6 +5,7 @@ import { MarkApplied } from "@/components/mark-applied";
 import { MissingJob } from "@/components/missing-job";
 import { PreparingLine } from "@/components/preparing-line";
 import { RefreshWhilePreparing } from "@/components/refresh-preparing";
+import { RegeneratePage } from "@/components/regenerate-page";
 import { RejectionNote } from "@/components/rejection-note";
 import { StageSelect } from "@/components/stage-select";
 import { formalLetter } from "@/lib/letter-plain";
@@ -60,17 +61,21 @@ export default async function ApplyDetailPage({ params }: { params: Promise<{ id
         </div>
       ) : null}
       {pack.state === "ready" && formatted ? (
-        <ApplyTabs
-          letter={formatted}
-          letterId={letter?.id ?? null}
-          wants={pack.lookingFor || []}
-          steps={guide?.steps || []}
-          url={guide?.url || ""}
-          asks={guide?.asks || []}
-          contact={contact}
-          companyNote={pack.companyNote || ""}
-          sources={sources}
-        />
+        <>
+          <RegeneratePage key={pack.readyAt ?? letter?.id ?? "ready"} jobId={job.id} readyAt={pack.readyAt} />
+          <ApplyTabs
+            key={letter?.id ?? "letter"}
+            letter={formatted}
+            letterId={letter?.id ?? null}
+            wants={pack.lookingFor || []}
+            steps={guide?.steps || []}
+            url={guide?.url || ""}
+            asks={guide?.asks || []}
+            contact={contact}
+            companyNote={pack.companyNote || ""}
+            sources={sources}
+          />
+        </>
       ) : null}
     </article>
   );

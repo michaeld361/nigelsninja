@@ -1,4 +1,4 @@
-import { formatClock, formatLongDate, formatMoney } from "./text";
+import { formatClock, formatLongDate, formatMoney, parseSalary } from "./text";
 import type { ContractType, Job, JobStatus, SourceId, WorkPattern } from "./types";
 
 export const STATUS_LABEL: Record<JobStatus, string> = {
@@ -28,15 +28,13 @@ export const PIPELINE_TABS: JobStatus[] = [
   "filtered",
 ];
 
-export function salaryLabel(job: Pick<Job, "salaryMin" | "salaryMax" | "salaryPeriod" | "currency">): string {
-  if (job.salaryMin == null && job.salaryMax == null) return "Salary not stated";
-  const min = job.salaryMin ?? job.salaryMax;
-  const max = job.salaryMax ?? job.salaryMin;
-  if (min == null || max == null) return "Salary not stated";
-  if (min === max) return formatMoney(min, job.currency, job.salaryPeriod);
-  const left = formatMoney(min, job.currency, null);
-  const right = formatMoney(max, job.currency, job.salaryPeriod);
-  return `${left} to ${right}`;
+export function salaryLabel(job: { descriptionText?: string }): string {
+  const stated = parseSalary(job.descriptionText || "");
+  const min = stated.salaryMin ?? stated.salaryMax;
+  const max = stated.salaryMax ?? stated.salaryMin;
+  if (min == null || max == null) return "";
+  if (min === max) return formatMoney(min, stated.currency, stated.salaryPeriod);
+  return `${formatMoney(min, stated.currency, stated.salaryPeriod)} to ${formatMoney(max, stated.currency, stated.salaryPeriod)}`;
 }
 
 export function patternLabel(pattern: WorkPattern, hybridDays: number | null): string {
@@ -67,7 +65,7 @@ export function listingDate(iso: string | null | undefined): string | null {
   return new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "long", year: "numeric", timeZone: "UTC" }).format(date);
 }
 
-export function jobMeta(job: Pick<Job, "location" | "demo" | "postedAt" | "salaryMin" | "salaryMax" | "salaryPeriod" | "currency">): string {
+export function jobMeta(job: Pick<Job, "location" | "demo" | "postedAt" | "descriptionText">): string {
   return [job.location, listingDate(job.postedAt), job.demo ? "Sample" : "", salaryLabel(job)].filter(Boolean).join(" · ");
 }
 

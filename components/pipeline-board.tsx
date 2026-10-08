@@ -109,7 +109,7 @@ export function PipelineBoard({ cards }: { cards: TodayCard[] }) {
                     {card.title}
                   </Link>
                   <span className="mt-0.5 block text-sm text-muted-foreground">
-                    {card.company} · {card.location} · {card.salary}
+                    {[card.company, card.location, card.salary].filter(Boolean).join(" · ")}
                     {card.score != null ? ` · ${card.score}` : ""}
                   </span>
                   {card.filteredReason ? <span className="mt-1 block text-xs text-muted-foreground">{card.filteredReason}</span> : null}

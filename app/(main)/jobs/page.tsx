@@ -94,11 +94,13 @@ export default function JobsPage() {
 
 function JobFacts({ job }: { job: Job }) {
   const date = listingDateShort(job.postedAt);
+  const pay = salaryLabel(job);
   return (
     <div className="mt-2.5 font-mono text-[11.5px] tracking-[0.02em] text-[rgba(242,241,236,0.55)]">
       {job.location}
       {date ? ` · ${date}` : ""}
-      {job.demo ? " · Sample" : ""} · <span className="text-[#F2F1EC]">{salaryLabel(job)}</span>
+      {job.demo ? " · Sample" : ""}
+      {pay ? <span className="text-[#F2F1EC]"> · {pay}</span> : null}
     </div>
   );
 }

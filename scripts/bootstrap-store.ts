@@ -1,6 +1,7 @@
 import fs from "fs";
 import path from "path";
 import type { Store } from "../lib/types";
+import { groundStoredPay } from "../lib/salary";
 import { ensureContractTypes, replayFiltered } from "../pipeline/replay-filter";
 
 const dir = process.env.DATA_DIR || path.join(process.cwd(), "data");
@@ -19,6 +20,7 @@ if (fs.existsSync(target)) {
   const store = JSON.parse(fs.readFileSync(target, "utf8")) as Store;
   const contracts = ensureContractTypes(store);
   const replay = replayFiltered(store);
-  if (contracts || replay.released > 0) fs.writeFileSync(target, JSON.stringify(store));
-  console.log(JSON.stringify({ replay: true, released: replay.released, kept: replay.kept, contracts }));
+  const salaries = groundStoredPay(store);
+  if (contracts || replay.released > 0 || salaries > 0) fs.writeFileSync(target, JSON.stringify(store));
+  console.log(JSON.stringify({ replay: true, released: replay.released, kept: replay.kept, contracts, salaries }));
 }

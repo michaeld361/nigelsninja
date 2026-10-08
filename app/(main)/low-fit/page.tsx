@@ -70,7 +70,8 @@ function Row({ job, index, fit }: { job: Job; index: number; fit: FitAssessment 
         <div className="mt-2.5 font-mono text-[11.5px] tracking-[0.02em] text-[rgba(242,241,236,0.55)]">
           {job.location}
           {date ? ` · ${date}` : ""}
-          {score != null ? ` · ${score}` : ""} · <span className="text-[#F2F1EC]">{salaryLabel(job)}</span>
+          {score != null ? ` · ${score}` : ""}
+          {salaryLabel(job) ? <span className="text-[#F2F1EC]"> · {salaryLabel(job)}</span> : null}
         </div>
         {reason ? <p className="mt-3 max-w-[52ch] text-[15px] leading-6 text-[rgba(242,241,236,0.72)]">{reason}</p> : null}
       </div>

@@ -1,6 +1,7 @@
 import { z } from "zod";
 import type { Job, SpecPoint } from "@/lib/types";
 import { stripLongDashes, toUkEnglish } from "@/lib/text";
+import { appendWeighing } from "@/lib/weighing";
 import { callClaude, extractJson } from "./llm";
 
 function writingModel(): string {
@@ -109,9 +110,22 @@ export function localSpecAnalysis(description: string, profileText = ""): SpecPo
   return points.slice(0, 4).map(tidyPoint);
 }
 
+export function specSystem(profileText: string, weighing = ""): string {
+  return [
+    "You analyse a job spec for Nigel Down, a UK data privacy lead. UK English. No em dashes or en dashes. No exclamation marks.",
+    "Return JSON only: { points: [ { want, show } ] } with 3 or 4 points.",
+    "want: what this employer is looking for, in one or two sentences, grounded only in the spec. Do not copy a requirement list.",
+    "show: what Nigel should make visible in the letter, tied to the CV facts below. He holds CIPP/E, CIPM and AIGP. He is not a solicitor. He left MullenLowe Global in July 2026. Do not invent employers, tools, or dates.",
+    "Do not give generic advice such as tailor your letter or show enthusiasm.",
+    ...(weighing.trim() ? [appendWeighing("Weigh this when you decide what Nigel should show.", weighing)] : []),
+    profileText.slice(0, 4000),
+  ].join("\n\n");
+}
+
 export async function buildSpecAnalysis(
   job: Pick<Job, "title" | "company" | "descriptionText">,
   profile: { cvText: string; linkedinSummary: string; personalStatement: string },
+  weighing = "",
 ): Promise<SpecPoint[]> {
   const profileText = [profile.cvText, profile.linkedinSummary, profile.personalStatement].filter(Boolean).join("\n");
   const local = localSpecAnalysis(`${job.title}\n${job.descriptionText}`, profileText);
@@ -120,14 +134,7 @@ export async function buildSpecAnalysis(
     const text = await callClaude({
       model: writingModel(),
       maxTokens: 1200,
-      system: [
-        "You analyse a job spec for Nigel Down, a UK data privacy lead. UK English. No em dashes or en dashes. No exclamation marks.",
-        "Return JSON only: { points: [ { want, show } ] } with 3 or 4 points.",
-        "want: what this employer is looking for, in one or two sentences, grounded only in the spec. Do not copy a requirement list.",
-        "show: what Nigel should make visible in the letter, tied to the CV facts below. He holds CIPP/E, CIPM and AIGP. He is not a solicitor. He left MullenLowe Global in July 2026. Do not invent employers, tools, or dates.",
-        "Do not give generic advice such as tailor your letter or show enthusiasm.",
-        profileText.slice(0, 4000),
-      ].join("\n\n"),
+      system: specSystem(profileText, weighing),
       user: `Company: ${job.company}\nTitle: ${job.title}\n\n${job.descriptionText.slice(0, 7000)}`,
     });
     const parsed = AnalysisSchema.parse(extractJson(text));

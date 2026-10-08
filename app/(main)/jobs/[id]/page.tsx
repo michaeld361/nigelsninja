@@ -18,6 +18,7 @@ export default async function JobPage({ params }: { params: Promise<{ id: string
   const stage = isApplicationStage(job.status) ? job.status : null;
   const back = stage ? { href: "/applied", label: "Applied" } : job.status === "skipped" ? { href: "/skipped", label: "Skipped" } : pack ? { href: "/apply", label: "To apply" } : { href: "/jobs", label: "Jobs" };
   const date = listingDateShort(job.postedAt);
+  const pay = salaryLabel(job);
   const blocks = listingBlocks(job.descriptionText);
   return (
     <article className="rise">
@@ -29,7 +30,8 @@ export default async function JobPage({ params }: { params: Promise<{ id: string
       <div className="mt-2.5 font-mono text-[11.5px] tracking-[0.02em] text-[rgba(242,241,236,0.55)]">
         {job.location}
         {date ? ` · ${date}` : ""}
-        {job.demo ? " · Sample" : ""} · <span className="text-[#F2F1EC]">{salaryLabel(job)}</span>
+        {job.demo ? " · Sample" : ""}
+        {pay ? <span className="text-[#F2F1EC]"> · {pay}</span> : null}
       </div>
       <div className="mt-8 flex flex-wrap items-start gap-x-4 gap-y-3 border-b border-[#F2F1EC] pb-8 sm:items-center">
         {stage ? (

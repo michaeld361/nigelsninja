@@ -43,7 +43,8 @@ export default function AppliedPage() {
                   <div className="mt-2 text-[19px]">{job.company}</div>
                   <div className="mt-2.5 font-mono text-[11.5px] text-[rgba(242,241,236,0.55)]">
                     {job.location}
-                    {date ? ` · ${date}` : ""} · {salaryLabel(job)}
+                    {date ? ` · ${date}` : ""}
+                    {salaryLabel(job) ? ` · ${salaryLabel(job)}` : ""}
                   </div>
                   {stage === "rejected" ? (
                     <RejectionNote
