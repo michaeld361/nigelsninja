@@ -16,7 +16,6 @@ type ActorItem = {
   publishedAt?: string;
   postedAt?: string;
   postedAtTimestamp?: number;
-  publishedAt?: string;
   salary?: string;
   salaryMin?: number | null;
   salaryMax?: number | null;
