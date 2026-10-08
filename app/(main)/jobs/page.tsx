@@ -20,8 +20,12 @@ export default function JobsPage() {
     .filter((job) => (live ? !job.demo : true))
     .sort((a, b) => b.postedAt.localeCompare(a.postedAt));
   const run = store.runs.find((item) => item.finishedAt && (live ? !item.counts.linkedin?.demo : true)) ?? null;
-  const skipped = store.jobs.filter(
-    (job) => job.status === "skipped" && job.sources.some((source) => source.source === "linkedin") && (live ? !job.demo : true),
+  const linkedIn = (job: Job) => job.sources.some((source) => source.source === "linkedin") && (live ? !job.demo : true);
+  const skipped = store.jobs.filter((job) => job.status === "skipped" && linkedIn(job)).length;
+  const low = store.jobs.filter((job) => (job.status === "low_fit" || job.status === "unscored") && linkedIn(job)).length;
+  const monthAgo = Date.now() - 30 * 24 * 60 * 60 * 1000;
+  const filtered = store.jobs.filter(
+    (job) => job.status === "filtered" && linkedIn(job) && new Date(job.firstSeenAt).getTime() >= monthAgo,
   ).length;
   const sample = !live && jobs.some((job) => job.demo);
   const searching = Boolean(store.runLock && new Date(store.runLock.until).getTime() > Date.now());
@@ -73,9 +77,17 @@ export default function JobsPage() {
           ))
         )}
       </div>
-      <Link href="/skipped" className="eyebrow mt-7 inline-block tracking-[0.12em] hover:text-[#FF6B5B]">
-        Skipped ({skipped}) →
-      </Link>
+      <div className="mt-7 flex flex-wrap gap-x-6 gap-y-2">
+        <Link href="/low-fit" className="eyebrow tracking-[0.12em] text-[rgba(242,241,236,0.45)] hover:text-[#FF6B5B]">
+          Low fit ({low}) →
+        </Link>
+        <Link href="/filtered" className="eyebrow tracking-[0.12em] text-[rgba(242,241,236,0.45)] hover:text-[#FF6B5B]">
+          Filtered ({filtered}) →
+        </Link>
+        <Link href="/skipped" className="eyebrow tracking-[0.12em] text-[rgba(242,241,236,0.45)] hover:text-[#FF6B5B]">
+          Skipped ({skipped}) →
+        </Link>
+      </div>
     </div>
   );
 }
