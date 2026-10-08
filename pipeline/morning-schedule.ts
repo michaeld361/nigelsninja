@@ -30,6 +30,16 @@ function loadEnv() {
   }
 }
 
+export function slotIsDue(nextRunAt: string, now = new Date()): boolean {
+  const due = new Date(nextRunAt).getTime();
+  if (Number.isNaN(due)) return true;
+  return now.getTime() >= due;
+}
+
+export function armNextMorning(from = new Date()): string {
+  return nextLondonSix(new Date(from.getTime() + 60 * 1000)).toISOString();
+}
+
 export function nextLondonSix(from = new Date()): Date {
   const today = londonDate(from);
   let target = utcForLondonClock(today.year, today.month, today.day, 6, 0);
@@ -83,38 +93,76 @@ function readState(): ScheduleState {
 }
 
 function writeState(state: ScheduleState) {
+  fs.mkdirSync(path.dirname(statePath), { recursive: true });
   fs.writeFileSync(statePath, JSON.stringify(state, null, 2));
+}
+
+function redact(value: string): string {
+  let text = value;
+  for (const [key, secret] of Object.entries(process.env)) {
+    if (!secret || secret.length < 8) continue;
+    if (!/TOKEN|KEY|SECRET|PASSWORD/i.test(key)) continue;
+    text = text.split(secret).join("");
+  }
+  return text.slice(0, 300);
+}
+
+function log(value: unknown) {
+  const line = `${JSON.stringify(value)}\n`;
+  try {
+    fs.writeSync(1, line);
+  } catch {
+    console.log(line.trim());
+  }
+}
+
+export async function runMorningSlot(now = new Date()): Promise<{ sent: boolean; skipped?: string; error?: string; subject?: string; nextRunAt: string }> {
+  const state = readState();
+  if (!slotIsDue(state.nextRunAt, now)) {
+    log({ skipped: "waiting", nextRunAt: state.nextRunAt });
+    return { sent: false, skipped: "waiting", nextRunAt: state.nextRunAt };
+  }
+  const result = await sendMorningEmail(now);
+  if (!result.sent) {
+    state.attempts += 1;
+    state.lastError = redact(result.error || "not sent");
+    state.nextRunAt = state.attempts >= 3 ? armNextMorning(now) : new Date(now.getTime() + 30 * 60 * 1000).toISOString();
+    if (state.attempts >= 3) state.attempts = 0;
+    writeState(state);
+    log({ sent: false, error: state.lastError, nextRunAt: state.nextRunAt });
+    return { sent: false, error: state.lastError || undefined, subject: result.subject, nextRunAt: state.nextRunAt };
+  }
+  state.lastRunAt = now.toISOString();
+  state.lastError = null;
+  state.attempts = 0;
+  state.nextRunAt = armNextMorning(now);
+  writeState(state);
+  log({ sent: true, subject: result.subject, nextRunAt: state.nextRunAt });
+  return { sent: true, subject: result.subject, nextRunAt: state.nextRunAt };
+}
+
+function sleep(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 async function main() {
   loadEnv();
-  const state = readState();
-  if (Date.now() < new Date(state.nextRunAt).getTime()) {
-    console.log(JSON.stringify({ skipped: "waiting", nextRunAt: state.nextRunAt }));
-    return;
+  const watch = process.argv.includes("--watch");
+  for (;;) {
+    const result = await runMorningSlot();
+    if (!watch) {
+      if (!result.sent && !result.skipped) process.exitCode = 1;
+      return;
+    }
+    const wait = Math.max(0, new Date(result.nextRunAt).getTime() - Date.now());
+    await sleep(Math.min(wait || 1000, 15 * 60 * 1000));
   }
-  const result = await sendMorningEmail();
-  if (!result.sent) {
-    state.attempts += 1;
-    state.lastError = (result.error || "not sent").slice(0, 300);
-    state.nextRunAt = state.attempts >= 3 ? nextLondonSix(new Date(Date.now() + 60 * 1000)).toISOString() : new Date(Date.now() + 30 * 60 * 1000).toISOString();
-    if (state.attempts >= 3) state.attempts = 0;
-    writeState(state);
-    console.log(JSON.stringify({ sent: false, error: state.lastError, nextRunAt: state.nextRunAt }));
-    return;
-  }
-  state.lastRunAt = new Date().toISOString();
-  state.lastError = null;
-  state.attempts = 0;
-  state.nextRunAt = nextLondonSix(new Date(Date.now() + 60 * 1000)).toISOString();
-  writeState(state);
-  console.log(JSON.stringify({ sent: true, subject: result.subject, nextRunAt: state.nextRunAt }));
 }
 
 const isMain = process.argv[1] && /morning-schedule\.ts$/.test(process.argv[1]);
 if (isMain) {
   main().catch(() => {
-    console.log(JSON.stringify({ sent: false }));
+    log({ sent: false });
     process.exit(1);
   });
 }

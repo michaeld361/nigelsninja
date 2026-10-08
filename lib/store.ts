@@ -47,9 +47,18 @@ export function emptyStore(): Store {
   };
 }
 
+function snapshotPath(): string {
+  return path.join(process.cwd(), "data", "hosted-snapshot.json");
+}
+
 function ensureStoreFile() {
   fs.mkdirSync(dataDir(), { recursive: true });
   if (fs.existsSync(storePath())) return;
+  const snapshot = snapshotPath();
+  if (fs.existsSync(snapshot) && path.resolve(snapshot) !== path.resolve(storePath())) {
+    fs.copyFileSync(snapshot, storePath());
+    return;
+  }
   if (fs.existsSync(seedPath())) {
     fs.copyFileSync(seedPath(), storePath());
     return;

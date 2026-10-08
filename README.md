@@ -43,7 +43,9 @@ Search keywords, the threshold, standing notes and the disclaimer live in Settin
 
 ## Data
 
-`pnpm import:nigel` reads `sources/` (the October 2026 CV, the tracker workbook, the PureGym sample letter and the certificate slides) into `data/seed.json` and `data/store.json`. The store is the local stand-in for the Supabase tables in `supabase/migrations/0001_init.sql`. Point the app at Supabase when you host it. The cron job on Render is `pnpm pipeline` at 06:00 Europe/London.
+`pnpm import:nigel` reads `sources/` (the October 2026 CV, the tracker workbook, the PureGym sample letter and the certificate slides) into `data/seed.json` and `data/store.json`.
+
+Hosting is a Render web service with a persistent disk at `/var/data` (`render.yaml`). `supabase/migrations/0001_init.sql` does not match this store (job ids, apply packs, sessions, and letters), so the hosted app keeps the JSON file. On an empty disk, `scripts/bootstrap-store.ts` copies `data/hosted-snapshot.json`. Render cron cannot mount that disk: the LinkedIn cron calls `POST /api/cron/linkedin` every 2 hours, and the morning cron calls `POST /api/cron/morning` at 05:00 and 06:00 UTC so 06:00 Europe/London is hit in both summer and winter. A missed morning slot still sends, then the next 06:00 London is armed. Set `RENDER_API_KEY` in `.env` before creating the service. `APIFY_TOKEN`, `ANTHROPIC_API_KEY`, `RESEND_API_KEY`, and `WRITING_MODEL` are entered on the Render service, not committed.
 
 `pnpm test` covers title filters, London radius, dedupe, the solicitor cap, letter hard rules, and a second run that adds no duplicates.
 

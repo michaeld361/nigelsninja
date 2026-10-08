@@ -3,7 +3,7 @@ import test from "node:test";
 import { emptyStore } from "../lib/store";
 import type { FitAssessment, Job } from "../lib/types";
 import { buildMorningEmail } from "../pipeline/morning-email";
-import { nextLondonSix } from "../pipeline/morning-schedule";
+import { armNextMorning, nextLondonSix, slotIsDue } from "../pipeline/morning-schedule";
 
 const now = new Date("2026-10-07T18:35:00.000Z");
 
@@ -54,6 +54,15 @@ test("the next morning send is 6:00 London", () => {
   assert.equal(nextLondonSix(new Date("2026-10-07T18:35:00.000Z")).toISOString(), "2026-10-08T05:00:00.000Z");
   assert.equal(nextLondonSix(new Date("2026-01-15T12:00:00.000Z")).toISOString(), "2026-01-16T06:00:00.000Z");
   assert.equal(nextLondonSix(new Date("2026-10-08T04:30:00.000Z")).toISOString(), "2026-10-08T05:00:00.000Z");
+});
+
+test("a missed 6:00 London slot is still due, then the next morning is armed", () => {
+  const missed = "2026-10-08T05:00:00.000Z";
+  const now = new Date("2026-10-08T09:20:00.000Z");
+  assert.equal(slotIsDue(missed, now), true);
+  assert.equal(slotIsDue("2026-10-09T05:00:00.000Z", now), false);
+  assert.equal(armNextMorning(now), "2026-10-09T05:00:00.000Z");
+  assert.equal(slotIsDue("not-a-date", now), true);
 });
 
 function job(id: string, firstSeenAt: string, status: Job["status"], title = "Old Role", company = "Old Co"): Job {

@@ -63,8 +63,12 @@ export function buildMorningEmail(store: Store, now = new Date(), appUrl = proce
   };
 }
 
+export function publicOrigin(): string {
+  return (process.env.APP_URL || process.env.RENDER_EXTERNAL_URL || "").trim().replace(/\/$/, "");
+}
+
 export async function sendMorningEmail(now = new Date()): Promise<{ sent: boolean; error?: string; subject: string }> {
-  const base = (process.env.APP_URL || "").replace(/\/$/, "");
+  const base = publicOrigin();
   const email = buildMorningEmail(loadStore(), now, base);
   if (!base || /127\.0\.0\.1|localhost/i.test(base)) {
     return { sent: false, subject: email.subject, error: "APP_URL is missing or points at this machine, so the email was not sent." };

@@ -1,0 +1,88 @@
+# nigelsninja on Render.
+# The live store is one JSON file. supabase/migrations/0001_init.sql is a different
+# shape (uuid jobs, no apply packs, sessions, or letters as the app writes them),
+# so the service uses a persistent disk instead of that database.
+# Cron jobs cannot mount a disk, so they call the web service, which owns the file.
+
+services:
+  - type: web
+    name: nigelsninja
+    runtime: node
+    plan: starter
+    region: frankfurt
+    branch: main
+    buildCommand: corepack enable && corepack prepare pnpm@10.33.3 --activate && pnpm install --frozen-lockfile && pnpm build
+    startCommand: pnpm exec tsx scripts/bootstrap-store.ts && pnpm exec next start --hostname 0.0.0.0 --port $PORT
+    healthCheckPath: /login
+    disk:
+      name: nigelsninja-store
+      mountPath: /var/data
+      sizeGB: 1
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: NODE_VERSION
+        value: "22"
+      - key: DATA_DIR
+        value: /var/data
+      - key: CRON_SECRET
+        generateValue: true
+      - key: APIFY_TOKEN
+        sync: false
+      - key: ANTHROPIC_API_KEY
+        sync: false
+      - key: RESEND_API_KEY
+        sync: false
+      - key: WRITING_MODEL
+        sync: false
+      - key: APIFY_LINKEDIN_ACTOR
+        sync: false
+      - key: SCORING_MODEL
+        sync: false
+
+  # Every 2 hours. The web service runs the search against the disk.
+  - type: cron
+    name: nigelsninja-linkedin
+    runtime: node
+    region: frankfurt
+    branch: main
+    schedule: "0 */2 * * *"
+    buildCommand: corepack enable && corepack prepare pnpm@10.33.3 --activate && pnpm install --frozen-lockfile
+    startCommand: pnpm exec tsx scripts/cron-call.ts linkedin
+    envVars:
+      - key: NODE_VERSION
+        value: "22"
+      - key: APP_URL
+        fromService:
+          name: nigelsninja
+          type: web
+          envVarKey: RENDER_EXTERNAL_URL
+      - key: CRON_SECRET
+        fromService:
+          name: nigelsninja
+          type: web
+          envVarKey: CRON_SECRET
+
+  # 05:00 and 06:00 UTC. London 06:00 is 05:00 UTC in summer and 06:00 UTC in winter.
+  # The handler sends only when that London slot is due, including a slot that was missed.
+  - type: cron
+    name: nigelsninja-morning
+    runtime: node
+    region: frankfurt
+    branch: main
+    schedule: "0 5,6 * * *"
+    buildCommand: corepack enable && corepack prepare pnpm@10.33.3 --activate && pnpm install --frozen-lockfile
+    startCommand: pnpm exec tsx scripts/cron-call.ts morning
+    envVars:
+      - key: NODE_VERSION
+        value: "22"
+      - key: APP_URL
+        fromService:
+          name: nigelsninja
+          type: web
+          envVarKey: RENDER_EXTERNAL_URL
+      - key: CRON_SECRET
+        fromService:
+          name: nigelsninja
+          type: web
+          envVarKey: CRON_SECRET
