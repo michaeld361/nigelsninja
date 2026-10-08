@@ -33,9 +33,8 @@ function serviceOf(row: unknown): RenderService {
 
 async function main() {
   loadEnv();
-  const needed = ["RENDER_API_KEY", "SUPABASE_URL", "SUPABASE_SERVICE_ROLE_KEY"].filter((name) => !present(name));
-  if (needed.length) {
-    console.log(JSON.stringify({ deployed: false, missing: needed, supabaseUsed: false }));
+  if (!present("RENDER_API_KEY")) {
+    console.log(JSON.stringify({ deployed: false, missing: ["RENDER_API_KEY"], supabaseUsed: false }));
     return;
   }
   const key = process.env.RENDER_API_KEY || "";
