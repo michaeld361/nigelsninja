@@ -17,6 +17,7 @@ import { searchJSearch } from "./sources/jsearch";
 import { searchLinkedIn } from "./sources/linkedin";
 import { searchReed } from "./sources/reed";
 import type { SourceResult } from "./sources/types";
+import { weighingText } from "@/lib/weighing";
 import { writeMarketNote } from "./market-note";
 import { draftLetter } from "./write";
 
@@ -129,6 +130,7 @@ export async function runPipeline(options: {
 
     console.log(JSON.stringify({ event: "pipeline-score", candidates: candidates.length, lookbackHours }));
     const profile = profileBlock(snapshot);
+    const weighing = weighingText(snapshot.notes, snapshot.learnings);
     const waitingForScore = snapshot.jobs.filter((job) => {
       if (job.status === "unscored") return true;
       if (job.status !== "low_fit") return false;
@@ -139,7 +141,7 @@ export async function runPipeline(options: {
     });
     for (const waiting of waitingForScore) {
       if (scored >= RUN_CAPS.scored) break;
-      const fit = await scoreJob(scoreInput(waiting), snapshot.settings, profile);
+      const fit = await scoreJob(scoreInput(waiting), snapshot.settings, profile, weighing);
       scored += 1;
       const status = fit.score >= snapshot.settings.scoreThreshold && !fit.blockers.length ? "new" : "low_fit";
       const letter = status === "new" ? await maybeLetter(waiting, fit) : undefined;
@@ -163,6 +165,7 @@ export async function runPipeline(options: {
         fit,
         snapshot.settings,
         profile,
+        weighing,
       );
       letters += 1;
       return {
@@ -251,7 +254,7 @@ export async function runPipeline(options: {
         planned.push({ job, raw: { source: raw.source, externalId: raw.externalId, payload: raw } });
         continue;
       }
-      const fit = await scoreJob(scoreInput(job), snapshot.settings, profile);
+      const fit = await scoreJob(scoreInput(job), snapshot.settings, profile, weighing);
       scored += 1;
       counts[raw.source].scored += 1;
       job.status = fit.score >= snapshot.settings.scoreThreshold && !fit.blockers.length ? "new" : "low_fit";

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { RejectionNote } from "@/components/rejection-note";
 import { StageSelect } from "@/components/stage-select";
 import { listingDateShort, salaryLabel } from "@/lib/format";
 import { isApplicationStage } from "@/lib/stages";
@@ -29,7 +30,7 @@ export default function AppliedPage() {
             return (
               <article
                 key={job.id}
-                className="job-row grid grid-cols-[2.75rem_minmax(0,1fr)] items-start gap-x-4 gap-y-3 border-b border-[rgba(242,241,236,0.12)] py-[30px] sm:grid-cols-[48px_minmax(0,1fr)_auto] sm:items-center sm:gap-5"
+                className="job-row grid grid-cols-[2.75rem_minmax(0,1fr)] items-start gap-x-4 gap-y-3 border-b border-[rgba(242,241,236,0.12)] py-[30px] sm:grid-cols-[48px_minmax(0,1fr)_auto] sm:gap-5"
               >
                 <div className="pt-3 font-mono text-xs text-[rgba(242,241,236,0.45)] sm:pt-0">{String(index + 1).padStart(2, "0")}</div>
                 <div className="min-w-0">
@@ -44,6 +45,13 @@ export default function AppliedPage() {
                     {job.location}
                     {date ? ` · ${date}` : ""} · {salaryLabel(job)}
                   </div>
+                  {stage === "rejected" ? (
+                    <RejectionNote
+                      jobId={job.id}
+                      reason={store.learnings.find((item) => item.jobId === job.id)?.reason ?? ""}
+                      date={store.learnings.find((item) => item.jobId === job.id)?.at ?? null}
+                    />
+                  ) : null}
                 </div>
                 <div className="col-start-2 min-w-0 sm:col-start-auto">
                   <StageSelect jobId={job.id} stage={stage} />

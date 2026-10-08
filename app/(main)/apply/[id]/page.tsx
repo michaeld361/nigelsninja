@@ -5,6 +5,7 @@ import { MarkApplied } from "@/components/mark-applied";
 import { MissingJob } from "@/components/missing-job";
 import { PreparingLine } from "@/components/preparing-line";
 import { RefreshWhilePreparing } from "@/components/refresh-preparing";
+import { RejectionNote } from "@/components/rejection-note";
 import { StageSelect } from "@/components/stage-select";
 import { formalLetter } from "@/lib/letter-plain";
 import { isApplicationStage } from "@/lib/stages";
@@ -35,6 +36,13 @@ export default async function ApplyDetailPage({ params }: { params: Promise<{ id
       <div className="mt-3 text-[22px] leading-snug break-words">{job.title}</div>
       <div className="mt-6">
         {isApplicationStage(job.status) ? <StageSelect jobId={job.id} stage={job.status} /> : <MarkApplied jobId={job.id} goTo="/applied" />}
+        {job.status === "rejected" ? (
+          <RejectionNote
+            jobId={job.id}
+            reason={store.learnings.find((item) => item.jobId === job.id)?.reason ?? ""}
+            date={store.learnings.find((item) => item.jobId === job.id)?.at ?? null}
+          />
+        ) : null}
       </div>
       {notice && pack.state !== "failed" ? <p className="mt-6 max-w-xl text-sm leading-6 text-[rgba(242,241,236,0.6)]">{notice}</p> : null}
       {pack.state === "preparing" ? (

@@ -301,6 +301,23 @@ export type MarketNote = {
   runId: string;
 };
 
+export type PersonalNote = {
+  id: string;
+  text: string;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type Learning = {
+  id: string;
+  jobId: string;
+  company: string;
+  title: string;
+  reason: string;
+  at: string;
+  updatedAt: string;
+};
+
 export type Store = {
   allowedUsers: AllowedUser[];
   profile: Profile;
@@ -319,6 +336,8 @@ export type Store = {
   runLock: RunLock;
   searchFailure: SearchFailure | null;
   marketNote: MarketNote | null;
+  notes: PersonalNote[];
+  learnings: Learning[];
 };
 
 export type RawJob = {

@@ -3,6 +3,7 @@ import { styleCheck } from "@/lib/style-check";
 import { stripLongDashes, toUkEnglish, wordCount } from "@/lib/text";
 import type { Settings } from "@/lib/types";
 import { factCheck } from "./check";
+import { appendWeighing } from "@/lib/weighing";
 import { callClaude, extractJson } from "./llm";
 import type { ScoreResult } from "./score";
 import fs from "fs";
@@ -295,11 +296,17 @@ function promptFile(name: string): string {
   return fs.existsSync(file) ? fs.readFileSync(file, "utf8") : "";
 }
 
+export function letterSystem(settings: Settings, profileText: string, weighing = ""): string {
+  const base = `${promptFile("letter-v1.md")}\n<style_examples>\n${promptFile("examples.md")}\n</style_examples>\n<standing_notes>\n${settings.standingNotes}\n</standing_notes>\n<profile>\n${profileText.slice(0, 14000)}\n</profile>`;
+  return appendWeighing(base, weighing);
+}
+
 export async function draftLetter(
   job: LetterJob,
   score: ScoreResult,
   settings: Settings,
   profileText: string,
+  weighing = "",
 ): Promise<LetterDraft> {
   const local = enforceStyle(draftLetterLocal(job, score, settings), job, score, settings);
   local.unsupportedClaims = factCheck(local.body.join("\n"), profileText);
@@ -307,7 +314,7 @@ export async function draftLetter(
 
   const model = process.env.WRITING_MODEL || "claude-fable-5-1";
   try {
-    const system = `${promptFile("letter-v1.md")}\n<style_examples>\n${promptFile("examples.md")}\n</style_examples>\n<standing_notes>\n${settings.standingNotes}\n</standing_notes>\n<profile>\n${profileText.slice(0, 14000)}\n</profile>`;
+    const system = letterSystem(settings, profileText, weighing);
     const user = `<job>\ncompany: ${job.company}\ntitle: ${job.title}\nlocation: ${job.location}\ncontract: ${job.contractType}\nsource: ${job.sourceLabel}\nspec: ${job.description.slice(0, 12000)}\n</job>\n<fit_assessment>\n${JSON.stringify(score)}\n</fit_assessment>\n<notes_for_this_letter>\n${job.letterNotes}\n</notes_for_this_letter>`;
     const text = await callClaude({ model, system, user, maxTokens: 1400, cacheSystem: true });
     const parsed = LetterSchema.parse(extractJson(text));

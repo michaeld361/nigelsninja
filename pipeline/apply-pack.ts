@@ -6,6 +6,7 @@ import { buildSpecAnalysis } from "./spec-analysis";
 import { factCheck } from "./check";
 import { callClaude, callClaudeWithWebSearch, extractJson } from "./llm";
 import { scoreLocal, type ScoreResult } from "./score";
+import { appendWeighing, weighingText } from "@/lib/weighing";
 import { draftLetterLocal, enforceStyle, type LetterDraft } from "./write";
 import { styleCheck } from "@/lib/style-check";
 import { z } from "zod";
@@ -79,7 +80,7 @@ export async function finishApplyPack(jobId: string): Promise<void> {
           },
           store.settings,
         );
-    const composed = await compose(job, score, store.settings, store.profile);
+    const composed = await compose(job, score, store.settings, store.profile, weighingText(store.notes, store.learnings));
     const sections = await researchSections(job);
     const lookingFor = await buildSpecAnalysis(job, store.profile);
     const letter = toLetter(job, composed.draft, store);
@@ -112,7 +113,7 @@ export async function finishApplyPack(jobId: string): Promise<void> {
 
 type Profile = { cvText: string; linkedinSummary: string; personalStatement: string };
 
-async function compose(job: Job, score: ScoreResult, settings: Settings, profile: Profile) {
+async function compose(job: Job, score: ScoreResult, settings: Settings, profile: Profile, weighing = "") {
   const local = localPieces(job, score, settings);
   if (!process.env.ANTHROPIC_API_KEY) return local;
   try {
@@ -125,6 +126,7 @@ async function compose(job: Job, score: ScoreResult, settings: Settings, profile
         "You draft a job application pack for Nigel Down, a UK data privacy professional. UK English. No em dashes or en dashes. Hyphens are fine.",
         "Use only facts from the CV, LinkedIn summary and personal statement for the letter. Never write 'current role'. He left MullenLowe in July 2026. Write 'CIPP/E, CIPM and AIGP'. Mention Mantle at most once. 4 or 5 paragraphs, 220 to 380 words.",
         "Return JSON only, with the key letter_paragraphs.",
+        ...(weighing.trim() ? [appendWeighing("Weigh this on the letter.", weighing)] : []),
         profile.cvText,
         profile.linkedinSummary,
         profile.personalStatement,

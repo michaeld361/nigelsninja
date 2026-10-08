@@ -5,22 +5,36 @@ import { deleteAllData, saveSettings, signOutEverywhere, uploadCv } from "@/app/
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import type { Profile, ProfileFile, Settings } from "@/lib/types";
+import { ProfileMemory } from "@/components/profile-memory";
+import type { Learning, PersonalNote, Profile, ProfileFile, Settings } from "@/lib/types";
 import { toast } from "sonner";
 
-export function SettingsForm({ profile, settings, files }: { profile: Profile; settings: Settings; files: ProfileFile[] }) {
+export function SettingsForm({
+  profile,
+  settings,
+  files,
+  notes,
+  learnings,
+}: {
+  profile: Profile;
+  settings: Settings;
+  files: ProfileFile[];
+  notes: PersonalNote[];
+  learnings: Learning[];
+}) {
   const [pending, start] = useTransition();
   const [message, setMessage] = useState<string | null>(null);
 
   return (
     <div className="rise space-y-14">
       <div>
-        <div className="eyebrow">Profile</div>
-        <h1 className="display mt-3.5 text-[clamp(40px,11vw,56px)] sm:text-[clamp(64px,9vw,112px)]">Settings</h1>
+        <h1 className="display text-[clamp(40px,11vw,56px)] sm:text-[clamp(64px,9vw,112px)]">Profile</h1>
         <p className="mt-7 max-w-[52ch] text-xl leading-[1.45] text-[rgba(242,241,236,0.7)]">
           {profile.headline}. {profile.addressLines.join(", ")}. {profile.phone}. {profile.email}. A change to the search is picked up on the next LinkedIn look.
         </p>
       </div>
+
+      <ProfileMemory notes={notes} learnings={learnings} />
 
       <form
         className="space-y-4 border-t border-[#F2F1EC] pt-6"

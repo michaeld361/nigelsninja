@@ -1,6 +1,7 @@
 import { LONDON_RADIUS, SCORE_PROMPT_VERSION } from "@/lib/defaults";
 import { titleMatchesPhrase } from "@/lib/text";
 import type { FitAssessment, Settings } from "@/lib/types";
+import { appendWeighing } from "@/lib/weighing";
 import { callClaude, extractJson } from "./llm";
 import { z } from "zod";
 
@@ -247,13 +248,18 @@ export function scoreLocal(input: ScoreInput, settings: Settings): ScoreResult {
   };
 }
 
-export async function scoreJob(input: ScoreInput, settings: Settings, profileText: string): Promise<ScoreResult> {
+export function scoreUser(profileText: string, input: unknown, local: unknown, weighing = ""): string {
+  const user = `<profile>\n${profileText.slice(0, 12000)}\n</profile>\n<job>\n${JSON.stringify(input).slice(0, 14000)}\n</job>\n<local_hint>\n${JSON.stringify(local)}\n</local_hint>`;
+  return appendWeighing(user, weighing);
+}
+
+export async function scoreJob(input: ScoreInput, settings: Settings, profileText: string, weighing = ""): Promise<ScoreResult> {
   const local = scoreLocal(input, settings);
   if (!process.env.ANTHROPIC_API_KEY) return local;
   const model = process.env.SCORING_MODEL || "claude-sonnet-5-5";
   try {
     const system = `You score UK data privacy jobs for Nigel Down. Return JSON only with keys score (0-100), summary (two or three sentences), matches, gaps, blockers, seniority_fit, location_fit, salary_note. Rubric: role and responsibilities 40, must-have requirements 25, sector and context 15, location and working pattern 10, seniority 10. Blockers is a closed list. The only permitted blockers are: qualified lawyer required, security clearance required, must be based somewhere specific outside the area, a language other than English. Anything else is a gap. A gap lowers the score and does not gate. Do not invent blockers. Use only the profile. Do not invent experience.`;
-    const user = `<profile>\n${profileText.slice(0, 12000)}\n</profile>\n<job>\n${JSON.stringify(input).slice(0, 14000)}\n</job>\n<local_hint>\n${JSON.stringify(local)}\n</local_hint>`;
+    const user = scoreUser(profileText, input, local, weighing);
     const text = await callClaude({
       model,
       system,

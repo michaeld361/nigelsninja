@@ -12,6 +12,7 @@ import { defaultSettings } from "@/lib/defaults";
 import { dataDir, emptyStore, loadStore, updateStore } from "@/lib/store";
 import type { ContractType, JobStatus, KeywordTier } from "@/lib/types";
 import { isApplicationStage, STAGE_LABEL, type ApplicationStage } from "@/lib/stages";
+import { rememberLearning, rememberNote, weighingText } from "@/lib/weighing";
 import { createPreparingPack, finishApplyPack } from "@/pipeline/apply-pack";
 import { claimRunLock, runPipeline } from "@/pipeline/run";
 import { draftLetter } from "@/pipeline/write";
@@ -215,6 +216,7 @@ export async function regenerateLetter(jobId: string): Promise<ActionResult> {
     },
     store.settings,
     profile,
+    weighingText(store.notes, store.learnings),
   );
   updateStore((current) => {
     const versions = current.letters.filter((item) => item.jobId === jobId);
@@ -361,6 +363,72 @@ export async function runLinkedInSearch(): Promise<ActionResult> {
   if (!claimRunLock(session.email)) return { ok: false, message: "A run is already in progress." };
   after(() => runPipeline({ trigger: "manual", by: session.email, sources: ["linkedin"], steadyBudget: true, holdLock: true }));
   return { ok: true };
+}
+
+export async function savePersonalNote(id: string | null, text: string): Promise<ActionResult> {
+  const session = await actor();
+  if (!session) return { ok: false, message: "Sign in again." };
+  const saved = updateStore((store) => {
+    const result = rememberNote(store.notes, { id, text, now: new Date().toISOString() });
+    if (!result.saved) return false;
+    store.notes = result.notes;
+    return true;
+  });
+  if (!saved) return { ok: false, message: "Write the note first." };
+  revalidatePath("/settings");
+  return { ok: true, message: "Saved. The next letter and the next search will weigh it." };
+}
+
+export async function saveRejectionReason(jobId: string, reason: string): Promise<ActionResult> {
+  const session = await actor();
+  if (!session) return { ok: false, message: "Sign in again." };
+  const outcome = updateStore((store) => {
+    const job = store.jobs.find((item) => item.id === jobId);
+    if (!job) return "missing" as const;
+    if (job.status !== "rejected") return "early" as const;
+    const result = rememberLearning(store.learnings, {
+      jobId,
+      company: job.company,
+      title: job.title,
+      reason,
+      now: new Date().toISOString(),
+    });
+    if (!result.saved) return "empty" as const;
+    store.learnings = result.learnings;
+    return "ok" as const;
+  });
+  if (outcome === "missing") return { ok: false, message: "That role is no longer here." };
+  if (outcome === "early") return { ok: false, message: "Set the stage to Rejected first." };
+  if (outcome === "empty") return { ok: false, message: "Write why it was unsuccessful." };
+  revalidatePath("/settings");
+  revalidatePath("/applied");
+  revalidatePath(`/jobs/${jobId}`);
+  revalidatePath(`/apply/${jobId}`);
+  return { ok: true, message: "Saved. The next letter and the next search will weigh it." };
+}
+
+export async function saveLearningReason(id: string, reason: string): Promise<ActionResult> {
+  const session = await actor();
+  if (!session) return { ok: false, message: "Sign in again." };
+  const outcome = updateStore((store) => {
+    const current = store.learnings.find((item) => item.id === id);
+    if (!current) return "missing" as const;
+    const result = rememberLearning(store.learnings, {
+      jobId: current.jobId,
+      company: current.company,
+      title: current.title,
+      reason,
+      now: new Date().toISOString(),
+    });
+    if (!result.saved) return "empty" as const;
+    store.learnings = result.learnings;
+    return "ok" as const;
+  });
+  if (outcome === "missing") return { ok: false, message: "That learning is no longer here." };
+  if (outcome === "empty") return { ok: false, message: "Write why it was unsuccessful." };
+  revalidatePath("/settings");
+  revalidatePath("/applied");
+  return { ok: true, message: "Saved. The next letter and the next search will weigh it." };
 }
 
 export async function markApplied(jobId: string): Promise<ActionResult> {

@@ -2,6 +2,7 @@ import Link from "next/link";
 import { JobActions } from "@/components/job-actions";
 import { MissingJob } from "@/components/missing-job";
 import { PreparingLine } from "@/components/preparing-line";
+import { RejectionNote } from "@/components/rejection-note";
 import { StageSelect } from "@/components/stage-select";
 import { listingBlocks, listingDateShort, salaryLabel } from "@/lib/format";
 import { isApplicationStage } from "@/lib/stages";
@@ -65,6 +66,13 @@ export default async function JobPage({ params }: { params: Promise<{ id: string
           </a>
         ) : null}
       </div>
+      {stage === "rejected" ? (
+        <RejectionNote
+          jobId={job.id}
+          reason={store.learnings.find((item) => item.jobId === job.id)?.reason ?? ""}
+          date={store.learnings.find((item) => item.jobId === job.id)?.at ?? null}
+        />
+      ) : null}
       <div className="mt-10 max-w-[62ch]">
         {blocks.map((block, index) => {
           if (block.kind === "head") {

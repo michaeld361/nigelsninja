@@ -46,6 +46,8 @@ export function emptyStore(): Store {
     runLock: null,
     searchFailure: null,
     marketNote: null,
+    notes: [],
+    learnings: [],
   };
 }
 
@@ -72,6 +74,8 @@ function normalise(store: Store): Store {
   if (!store.applyPacks) store.applyPacks = [];
   if (!store.searchFailure) store.searchFailure = null;
   if (!store.marketNote) store.marketNote = null;
+  if (!store.notes) store.notes = [];
+  if (!store.learnings) store.learnings = [];
   for (const pack of store.applyPacks) {
     if (!pack.companySources) pack.companySources = [];
     if (!pack.lookingFor) pack.lookingFor = [];
