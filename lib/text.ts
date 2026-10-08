@@ -85,17 +85,33 @@ export function titleMatchesPhrase(title: string, phrase: string): boolean {
   return normalisedHay.includes(needle);
 }
 
+const JUNIOR_TITLE = /\b(analyst|intern|graduate|trainee|apprentice|junior|executive|coordinator|administrator)\b/i;
+
+const DOMAIN_TITLE = [
+  /\bprivacy\b/i,
+  /\bdata protection\b/i,
+  /\bdpo\b/i,
+  /\binformation governance\b/i,
+  /\bdata governance\b/i,
+  /\bai governance\b/i,
+  /\bartificial intelligence governance\b/i,
+  /\brecords management\b/i,
+  /\bcompliance\b/i,
+];
+
+export function titleHasDomainToken(title: string): boolean {
+  return DOMAIN_TITLE.some((pattern) => pattern.test(title));
+}
+
 export function juniorTitleReason(title: string): string | null {
   const t = title.toLowerCase();
-  if (/\banalyst\b/.test(t)) return "Title contains Analyst";
-  if (/\bintern\b/.test(t)) return "Title contains Intern";
-  if (/\bgraduate\b/.test(t)) return "Title contains Graduate";
-  if (/\bapprentice\b/.test(t)) return "Title contains Apprentice";
-  if (/\bcoordinator\b/.test(t)) return "Title contains Coordinator";
-  if (/\bexecutive\b/.test(t)) return "Title contains Executive";
-  if (/\bofficer\b/.test(t) && !/data protection officer/.test(t)) return "Title contains Officer";
-  if (/\bassistant\b/.test(t) && !/assistant director/.test(t)) return "Title contains Assistant";
-  return null;
+  if (/\bdeputy\b/.test(t)) return null;
+  if (/\b(data protection officer|privacy officer|chief privacy officer)\b/.test(t)) return null;
+  if (/\bgroup dpo\b/.test(t)) return null;
+  const match = t.match(JUNIOR_TITLE);
+  if (!match) return null;
+  const word = match[1];
+  return `Title contains ${word.charAt(0).toUpperCase()}${word.slice(1)}`;
 }
 
 export function parseSalary(text: string): {
@@ -147,13 +163,18 @@ export function inferWorkPattern(text: string): { workPattern: WorkPattern; hybr
   return { workPattern: "hybrid", hybridDays: hybridDays ? Number(hybridDays[1]) : null };
 }
 
-export function inferContract(text: string): "permanent" | "fixed-term" | "contract" | "part-time" | "freelance" {
+export function statedContract(text: string): "permanent" | "fixed-term" | "contract" | "part-time" | "freelance" | null {
   const t = text.toLowerCase();
   if (/freelance|expert network|subject-matter expert/.test(t)) return "freelance";
-  if (/inside ir35|outside ir35|day rate|per day|contract/.test(t)) return "contract";
-  if (/part[- ]time|0\.\d\s*fte|fte/.test(t)) return "part-time";
-  if (/fixed[- ]term|ftc\b|maternity cover|\d+[- ]month/.test(t)) return "fixed-term";
-  return "permanent";
+  if (/inside ir35|outside ir35|day rate|per day|\bcontract\b|temporary/.test(t)) return "contract";
+  if (/part[- ]time|0\.\d\s*fte/.test(t)) return "part-time";
+  if (/fixed[- ]term|\bftc\b|maternity cover|\d+[- ]month/.test(t)) return "fixed-term";
+  if (/\bpermanent\b|full[- ]time/.test(t)) return "permanent";
+  return null;
+}
+
+export function inferContract(text: string): "permanent" | "fixed-term" | "contract" | "part-time" | "freelance" {
+  return statedContract(text) ?? "permanent";
 }
 
 export function londonNow(date = new Date()): Date {

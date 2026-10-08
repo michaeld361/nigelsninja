@@ -17,12 +17,12 @@ export default function SkippedPage() {
       </Link>
       <h1 className="display mt-6 text-[clamp(40px,11vw,56px)] sm:text-[clamp(64px,9vw,112px)]">Skipped</h1>
       <p className="mt-7 max-w-[52ch] text-xl leading-[1.45] text-[rgba(242,241,236,0.7)]">
-        Roles you have set aside. They stay here if you want another look, and they do not sit on a pipeline.
+        Roles you set aside. They stay here if you want another look.
       </p>
       <div className="mt-12 border-t border-[#F2F1EC]">
         {jobs.length === 0 ? (
           <div className="py-14 font-[family-name:var(--font-bricolage)] text-[28px] font-bold text-[rgba(242,241,236,0.5)] italic">
-            You have not set a role aside yet.
+            Nothing set aside yet.
           </div>
         ) : (
           jobs.map((job, index) => {

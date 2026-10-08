@@ -38,7 +38,7 @@ export default async function ApplyDetailPage({ params }: { params: Promise<{ id
       ) : null}
       {pack.state === "failed" ? (
         <div className="mt-10 max-w-xl">
-          <p className="font-[family-name:var(--font-bricolage)] text-[28px] leading-snug font-bold">This letter did not finish.</p>
+          <p className="font-[family-name:var(--font-bricolage)] text-[28px] leading-snug font-bold">This letter stopped before it was ready.</p>
           {notice ? <p className="mt-3 text-sm text-[rgba(242,241,236,0.6)]">{notice}</p> : null}
           <div className="mt-6">
             <ApplyActions jobId={job.id} letterText="" letterId={null} retry />

@@ -145,7 +145,7 @@ function localRead(points: MarketPoint[], asks: MarketBar[], places: MarketBar[]
   if (gaps.length) {
     paragraphs.push(`Worth adding to the CV, because it is in the specs and not obvious on yours: ${gaps.map((gap) => gap.gap).join(" ")}`);
   } else if (leadAsk) {
-    paragraphs.push("Nothing in these listings asks for a credential you do not already hold. The useful move is to bring CIPP/E, CIPM, AIGP, and the operating work at MullenLowe, forward in the letter rather than adding a new claim.");
+    paragraphs.push("You already hold what these listings ask for. In the letter, bring CIPP/E, CIPM, AIGP, and the operating work at MullenLowe, forward.");
   }
   return paragraphs;
 }

@@ -13,12 +13,12 @@ export default function ApplyPage() {
       <div className="eyebrow">Apply list · {packs.length} {packs.length === 1 ? "role" : "roles"}</div>
       <h1 className="display mt-3.5 text-[clamp(40px,11vw,56px)] sm:text-[clamp(64px,9vw,112px)]">Going for</h1>
       <p className="mt-7 max-w-[52ch] text-xl leading-[1.45] text-[rgba(242,241,236,0.7)]">
-        The roles you have chosen. Open one for the letter, what they want to see, and how to send it.
+        The roles you picked. Open one for the letter, what they want to see, and how you send it.
       </p>
       <div className="mt-12 border-t border-[#F2F1EC]">
         {packs.length === 0 ? (
           <div className="py-14 font-[family-name:var(--font-bricolage)] text-[28px] font-bold text-[rgba(242,241,236,0.5)] italic">
-            Your list is clear. When a role feels right, add it from Jobs and a letter will be drawn up.
+            Nothing here yet. Add a role from Jobs when you want a letter.
           </div>
         ) : (
           packs.map((pack, index) => {

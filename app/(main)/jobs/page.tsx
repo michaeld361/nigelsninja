@@ -1,11 +1,13 @@
 import Link from "next/link";
 import { JobActions } from "@/components/job-actions";
+import { JobsSummary } from "@/components/jobs-summary";
 import { SearchTrigger } from "@/components/search-trigger";
 import { listingDateShort, londonDayMonth, londonWeekday, salaryLabel } from "@/lib/format";
 import { formatClock } from "@/lib/text";
 import { loadStore } from "@/lib/store";
 import type { Job, Run } from "@/lib/types";
 import { practisingQualificationReason } from "@/pipeline/prefilter";
+import { expectedSearchLoad } from "@/pipeline/search-plan";
 
 export const maxDuration = 300;
 
@@ -50,9 +52,10 @@ export default function JobsPage() {
           worth a look
         </div>
       </div>
-      <p className="mt-10 max-w-[52ch] text-xl leading-[1.45] text-[rgba(242,241,236,0.7)]">
-        A few LinkedIn privacy roles that fit the search you set. Add one when you want a letter. You send it yourself.
-      </p>
+      {jobs.length ? (
+        <JobsSummary jobs={jobs.map((job) => ({ id: job.id, title: job.title, location: job.location }))} />
+      ) : null}
+      <SearchCost phrases={store.settings.tiers.filter((tier) => tier.enabled).flatMap((tier) => tier.phrases).length} places={store.settings.locations.length} />
       {sample ? (
         <p className="mt-6 max-w-[52ch] text-[15px] leading-6 text-[rgba(242,241,236,0.55)]">
           These are sample listings, so you can see how the page feels. Live LinkedIn roles appear once Apify is connected.
@@ -62,7 +65,7 @@ export default function JobsPage() {
       <div className="mt-12 border-t border-[rgba(242,241,236,0.12)]">
         {jobs.length === 0 ? (
           <div className="py-14 font-[family-name:var(--font-bricolage)] text-[28px] font-bold text-[rgba(242,241,236,0.5)] italic">
-            Nothing left to look at today.
+            Nothing new to look at. The next search will add a role when one fits.
           </div>
         ) : (
           jobs.map((job, index) => (
@@ -89,6 +92,15 @@ export default function JobsPage() {
         Skipped ({skipped}) →
       </Link>
     </div>
+  );
+}
+
+function SearchCost({ phrases, places }: { phrases: number; places: number }) {
+  const load = expectedSearchLoad(phrases, places);
+  return (
+    <p className="mt-4 max-w-[56ch] text-[15px] leading-6 text-[rgba(242,241,236,0.5)]">
+      {`${load.phrases} phrases across ${load.locations} ${load.locations === 1 ? "place" : "places"}, each pair its own search, up to 200 rows. A two-hour run stops at $${load.steadyCapUsd}. A seven-day catch-up stops at $${load.backfillCapUsd}. At $1.25 per 1,000 roles, twelve full searches would be about $${load.usdPerDay}, past the $19 Starter credit.`}
+    </p>
   );
 }
 

@@ -2,8 +2,9 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { emptyStore } from "../lib/store";
 import type { FitAssessment, Job } from "../lib/types";
+import { magicLinkEmail } from "../pipeline/brand-email";
 import { buildMorningEmail } from "../pipeline/morning-email";
-import { armNextMorning, nextLondonSix, slotIsDue } from "../pipeline/morning-schedule";
+import { armNextMorning, initialMorningNext, nextLondonSix, slotIsDue } from "../pipeline/morning-schedule";
 
 const now = new Date("2026-10-07T18:35:00.000Z");
 
@@ -63,6 +64,21 @@ test("a missed 6:00 London slot is still due, then the next morning is armed", (
   assert.equal(slotIsDue("2026-10-09T05:00:00.000Z", now), false);
   assert.equal(armNextMorning(now), "2026-10-09T05:00:00.000Z");
   assert.equal(slotIsDue("not-a-date", now), true);
+});
+
+test("a fresh morning clock still catches 6:00 London, and does not send again the same afternoon", () => {
+  assert.equal(initialMorningNext(new Date("2026-10-09T05:00:00.000Z")), "2026-10-09T05:00:00.000Z");
+  assert.equal(initialMorningNext(new Date("2026-10-09T05:40:00.000Z")), "2026-10-09T05:00:00.000Z");
+  assert.equal(initialMorningNext(new Date("2026-10-08T10:23:00.000Z")), "2026-10-09T05:00:00.000Z");
+  assert.equal(initialMorningNext(new Date("2026-10-08T04:00:00.000Z")), "2026-10-08T05:00:00.000Z");
+});
+
+test("the sign-in email keeps one steady line", () => {
+  const mail = magicLinkEmail("https://example.test/login/consume?token=abc");
+  assert.equal(mail.subject, "Sign in to nigelsninja");
+  assert.equal(mail.html.includes("You are the one who sends it."), false);
+  assert.match(mail.html, /worth sending/);
+  assert.match(mail.html, /nigelsninja/);
 });
 
 function job(id: string, firstSeenAt: string, status: Job["status"], title = "Old Role", company = "Old Co"): Job {

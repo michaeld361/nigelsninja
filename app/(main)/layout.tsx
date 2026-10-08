@@ -13,8 +13,12 @@ export default async function MainLayout({ children }: { children: React.ReactNo
     .filter((job) => !practisingQualificationReason(job.title, job.descriptionText))
     .filter((job) => (live ? !job.demo : true));
   const searches = store.runs.filter((run) => run.finishedAt && (live ? !run.counts.linkedin?.demo : true)).length;
+  const visible = (job: (typeof store.jobs)[number]) =>
+    job.sources.some((source) => source.source === "linkedin") && (live ? !job.demo : true);
+  const low = store.jobs.filter((job) => (job.status === "low_fit" || job.status === "unscored") && visible(job)).length;
+  const filtered = store.jobs.filter((job) => job.status === "filtered" && visible(job)).length;
   return (
-    <Shell name={session.name} role={session.role} counts={{ jobs: jobs.length, market: searches, apply: store.applyPacks.length }}>
+    <Shell name={session.name} role={session.role} counts={{ jobs: jobs.length, low, filtered, market: searches, apply: store.applyPacks.length }}>
       {children}
     </Shell>
   );

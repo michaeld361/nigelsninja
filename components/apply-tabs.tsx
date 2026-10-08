@@ -69,7 +69,7 @@ export function ApplyTabs({
               </div>
             ))
           ) : (
-            <p className="py-10 text-[17.5px] text-[rgba(242,241,236,0.7)]">The spec read is still being drawn up.</p>
+            <p className="py-10 text-[17.5px] text-[rgba(242,241,236,0.7)]">The read of this spec is still on its way.</p>
           )}
         </div>
       ) : null}
@@ -112,7 +112,7 @@ export function ApplyTabs({
           <ContactBlock contact={contact} />
           <div className="eyebrow mt-9 mb-3 text-[10.5px]">The company</div>
           <div className="flex flex-col gap-4 text-[18.5px] leading-[1.55] text-[rgba(242,241,236,0.85)]">
-            {(companyNote || "A short note on the company is still being drawn up.").split(/\n\n+/).filter(Boolean).map((paragraph) => (
+            {(companyNote || "A short note on the company is still on its way.").split(/\n\n+/).filter(Boolean).map((paragraph) => (
               <p key={paragraph.slice(0, 40)} className="m-0">
                 {paragraph}
               </p>

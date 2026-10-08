@@ -6,6 +6,8 @@ import { signOut } from "@/app/actions";
 
 const sections = [
   { href: "/jobs", label: "Jobs", key: "jobs" as const },
+  { href: "/low-fit", label: "Low fit", key: "low" as const },
+  { href: "/filtered", label: "Filtered", key: "filtered" as const },
   { href: "/market", label: "Market", key: "market" as const },
   { href: "/apply", label: "Apply list", key: "apply" as const },
 ];
@@ -19,18 +21,18 @@ export function Shell({
   children: React.ReactNode;
   name: string;
   role: "candidate" | "admin";
-  counts: { jobs: number; market: number; apply: number };
+  counts: { jobs: number; low: number; filtered: number; market: number; apply: number };
 }) {
   const pathname = usePathname();
   return (
     <div className="min-h-screen bg-transparent text-[#F2F1EC] max-md:overflow-x-clip md:grid md:grid-cols-[minmax(200px,240px)_minmax(0,1fr)]">
       <aside className="box-border flex flex-col justify-between gap-8 border-b border-[rgba(242,241,236,0.1)] px-5 py-5 md:sticky md:top-0 md:h-screen md:gap-10 md:border-r md:border-b-0 md:px-8 md:py-10">
         <div className="flex flex-col gap-6 md:gap-11">
-          <Link href="/jobs">
-            <div className="font-[family-name:var(--font-bricolage)] text-[34px] leading-none font-bold tracking-[-0.02em]">
+          <Link href="/jobs" className="@container block min-w-0">
+            <div className="display whitespace-nowrap text-[clamp(1.05rem,15cqi,2.125rem)] leading-none">
               nigelsninja<span className="text-[#FF6B5B]">.</span>
             </div>
-            <div className="mt-2.5 font-mono text-[10px] tracking-[0.14em] text-[rgba(242,241,236,0.5)] uppercase">His privacy search</div>
+            <div className="mt-2.5 font-mono text-[10px] tracking-[0.14em] text-[rgba(242,241,236,0.5)] uppercase">Privacy search</div>
           </Link>
           <nav className="flex flex-row flex-wrap gap-x-5 gap-y-1 md:flex-col md:flex-nowrap md:gap-0.5">
             {sections.map((item) => {

@@ -26,7 +26,7 @@ const mono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: "nigelsninja",
-  description: "LinkedIn privacy roles for Nigel Down, with a letter when he chooses to apply.",
+  description: "Privacy roles from LinkedIn, and a letter when one is worth sending.",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

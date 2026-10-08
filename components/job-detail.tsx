@@ -15,7 +15,7 @@ import { STATUS_LABEL } from "@/lib/format";
 import type { FitAssessment, Job, JobStatus, Letter, Settings } from "@/lib/types";
 import { toast } from "sonner";
 
-const STATUSES: JobStatus[] = ["new", "low_fit", "shortlisted", "applied", "interview", "offer", "rejected", "skipped", "filtered", "expired"];
+const STATUSES: JobStatus[] = ["new", "low_fit", "unscored", "shortlisted", "applied", "interview", "offer", "rejected", "skipped", "filtered", "expired"];
 
 export function JobDetail({
   job,

@@ -10,6 +10,7 @@ export type JobStatus =
   | "rejected"
   | "skipped"
   | "filtered"
+  | "unscored"
   | "expired";
 
 export type WorkPattern = "remote" | "hybrid" | "on-site";

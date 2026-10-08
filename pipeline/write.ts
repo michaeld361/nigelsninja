@@ -167,9 +167,9 @@ function exampleFor(company: string, description: string): string {
 function gapSentences(score: ScoreResult, notes: string): string[] {
   const sentences: string[] = [];
   const solicitor =
-    score.blockers.some((item) => /solicitor/i.test(item)) ||
-    score.flags.some((item) => /solicitor/i.test(item)) ||
-    /solicitor/i.test(notes);
+    score.blockers.some((item) => /solicitor|lawyer/i.test(item)) ||
+    score.flags.some((item) => /solicitor|lawyer/i.test(item)) ||
+    /solicitor|lawyer/i.test(notes);
   if (solicitor) {
     sentences.push(
       "Although I am not a qualified solicitor, I offer significant knowledge, experience and management of privacy compliance, and I have worked closely with legal teams throughout.",

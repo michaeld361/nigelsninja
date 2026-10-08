@@ -1,7 +1,10 @@
 import { RUN_CAPS } from "@/lib/defaults";
 import { loadStore, updateStore } from "@/lib/store";
+import { statedContract } from "@/lib/text";
 import type { FitAssessment, Job, Letter, Run, Settings, SourceId, Store } from "@/lib/types";
+import { alreadyAppliedMatch } from "./applied";
 import { takeCost } from "./llm";
+import { lookbackSince } from "./lookback";
 import { normaliseRaw } from "./normalise";
 import { buildDigest, sendEmail } from "./notify";
 import { PRACTISING_QUALIFICATION, prefilterJob } from "./prefilter";
@@ -55,7 +58,7 @@ export async function runPipeline(options: {
 
   try {
     const snapshot = loadStore();
-    const lookbackHours = snapshot.runs.some((run) => run.finishedAt) ? 24 : 24 * 7;
+    const lookbackHours = lookbackSince(snapshot.runs, started.getTime());
     const phrases = enabledPhrases(snapshot.settings);
     const contractTypes = (Object.keys(snapshot.settings.contractTypes) as (keyof Settings["contractTypes"])[]).filter(
       (key) => snapshot.settings.contractTypes[key],
@@ -89,11 +92,8 @@ export async function runPipeline(options: {
     const ceilingHit = spendThisMonth(snapshot) >= snapshot.settings.monthlySpendCeilingUsd;
     const skipLettersReason = ceilingHit ? "Monthly spend ceiling reached. Scoring continued and letters were skipped." : null;
 
-    const appliedKeys = new Set(snapshot.applications.map((item) => item.applicationKey));
-    for (const job of snapshot.jobs) {
-      if (job.status === "applied") appliedKeys.add(job.applicationKey);
-    }
     const sourceMerges: { dedupeKey: string; url: string; source: Job["sources"][number] }[] = [];
+    const backlogScored: { id: string; status: Job["status"]; fit: ScoreResult; letter?: Letter }[] = [];
 
     const candidates: { result: SourceResult; rawIndex: number }[] = [];
     for (const result of results) {
@@ -106,16 +106,71 @@ export async function runPipeline(options: {
       } else if (result.fetched === 0) {
         warnings.push(`${label(result.source)} returned zero results.`);
       }
+      for (const note of result.capHits || []) warnings.push(note);
       if (result.demo) warnings.push(`${label(result.source)} used sample listings because its API key is not set.`);
       result.jobs.forEach((_, index) => candidates.push({ result, rawIndex: index }));
     }
 
     const profile = profileBlock(snapshot);
+    for (const waiting of snapshot.jobs.filter((job) => job.status === "unscored")) {
+      if (scored >= RUN_CAPS.scored) break;
+      const fit = await scoreJob(scoreInput(waiting), snapshot.settings, profile);
+      scored += 1;
+      const status = fit.score >= snapshot.settings.scoreThreshold && !fit.blockers.length ? "new" : "low_fit";
+      const letter = status === "new" ? await maybeLetter(waiting, fit) : undefined;
+      backlogScored.push({ id: waiting.id, status, fit, letter });
+      waiting.status = status;
+      counts.linkedin.scored += 1;
+    }
+
+    async function maybeLetter(job: Job, fit: ScoreResult): Promise<Letter | undefined> {
+      if (letters >= RUN_CAPS.letters || skipLettersReason) return undefined;
+      const draft = await draftLetter(
+        {
+          company: job.company,
+          title: job.title,
+          location: job.location,
+          contractType: job.contractType,
+          sourceLabel: job.sources[0]?.publisher || job.sources[0]?.source || "LinkedIn",
+          description: job.descriptionText,
+          letterNotes: job.letterNotes,
+        },
+        fit,
+        snapshot.settings,
+        profile,
+      );
+      letters += 1;
+      return {
+        id: `letter-${job.id}-1`,
+        jobId: job.id,
+        version: 1,
+        model: draft.model,
+        configuredWritingModel: draft.configuredWritingModel,
+        promptVersion: draft.promptVersion,
+        cvVersion: snapshot.profile.cvVersion,
+        refLine: draft.refLine,
+        salutation: draft.salutation,
+        body: draft.body,
+        signOff: draft.signOff,
+        notesForNigel: draft.notesForNigel,
+        unsupportedClaims: draft.unsupportedClaims,
+        styleIssues: draft.styleIssues,
+        wordCount: draft.wordCount,
+        editedBody: null,
+        disclaimerEnabled: null,
+        state: "draft",
+        origin: "generated",
+        docxPath: null,
+        createdAt: new Date().toISOString(),
+      };
+    }
+
     for (const item of candidates) {
       const raw = item.result.jobs[item.rawIndex];
       const normalised = normaliseRaw(raw, started.toISOString());
-      const existing = snapshot.jobs.find((job) => job.dedupeKey === normalised.dedupeKey);
-      const alreadyPlanned = planned.find((item) => item.job.dedupeKey === normalised.dedupeKey);
+      const postingId = `job-${raw.source}-${raw.externalId}`;
+      const existing = snapshot.jobs.find((job) => job.id === postingId || job.dedupeKey === normalised.dedupeKey);
+      const alreadyPlanned = planned.find((item) => item.job.id === postingId || item.job.dedupeKey === normalised.dedupeKey);
       if (existing || alreadyPlanned || seenKeys.has(normalised.dedupeKey)) {
         counts[raw.source].duplicates += 1;
         const link = normalised.sources[0];
@@ -127,12 +182,27 @@ export async function runPipeline(options: {
         continue;
       }
       seenKeys.add(normalised.dedupeKey);
-      if (appliedKeys.has(normalised.applicationKey)) {
+      if (
+        alreadyAppliedMatch({
+          postingId,
+          applicationKey: normalised.applicationKey,
+          now: started.getTime(),
+          jobs: snapshot.jobs,
+          applications: snapshot.applications,
+        })
+      ) {
         counts[raw.source].alreadyApplied += 1;
         continue;
       }
-      const gate = prefilterJob({ ...normalised, description: normalised.descriptionText }, snapshot.settings);
-      const id = `job-${raw.source}-${raw.externalId}`;
+      const gate = prefilterJob(
+        {
+          ...normalised,
+          description: normalised.descriptionText,
+          contractExplicit: raw.contractType ?? statedContract(`${normalised.title}\n${normalised.descriptionText}`),
+        },
+        snapshot.settings,
+      );
+      const id = postingId;
       const job: Job = {
         ...normalised,
         id,
@@ -151,81 +221,29 @@ export async function runPipeline(options: {
         continue;
       }
       if (scored >= RUN_CAPS.scored) {
-        job.status = "filtered";
-        job.filteredReason = "Left unscored because the run hit the 80 job cap";
-        counts[raw.source].filtered += 1;
+        job.status = "unscored";
+        job.filteredReason = null;
         planned.push({ job, raw: { source: raw.source, externalId: raw.externalId, payload: raw } });
         continue;
       }
-      const fit = await scoreJob(
-        {
-          title: job.title,
-          company: job.company,
-          location: job.location,
-          workPattern: job.workPattern,
-          europeRemote: job.europeRemote,
-          description: job.descriptionText,
-          salaryMin: job.salaryMin,
-          salaryMax: job.salaryMax,
-          salaryPeriod: job.salaryPeriod,
-          currency: job.currency,
-          contractType: job.contractType,
-        },
-        snapshot.settings,
-        profile,
-      );
+      const fit = await scoreJob(scoreInput(job), snapshot.settings, profile);
       scored += 1;
       counts[raw.source].scored += 1;
       job.status = fit.score >= snapshot.settings.scoreThreshold && !fit.blockers.length ? "new" : "low_fit";
       if (fit.blockers.length && fit.score >= snapshot.settings.scoreThreshold) job.status = "low_fit";
-      let letter: Letter | undefined;
-      if (job.status === "new" && letters < RUN_CAPS.letters && !skipLettersReason) {
-        const draft = await draftLetter(
-          {
-            company: job.company,
-            title: job.title,
-            location: job.location,
-            contractType: job.contractType,
-            sourceLabel: raw.publisher || raw.source,
-            description: job.descriptionText,
-            letterNotes: "",
-          },
-          fit,
-          snapshot.settings,
-          profile,
-        );
-        letters += 1;
-        counts[raw.source].letters += 1;
-        letter = {
-          id: `letter-${job.id}-1`,
-          jobId: job.id,
-          version: 1,
-          model: draft.model,
-          configuredWritingModel: draft.configuredWritingModel,
-          promptVersion: draft.promptVersion,
-          cvVersion: snapshot.profile.cvVersion,
-          refLine: draft.refLine,
-          salutation: draft.salutation,
-          body: draft.body,
-          signOff: draft.signOff,
-          notesForNigel: draft.notesForNigel,
-          unsupportedClaims: draft.unsupportedClaims,
-          styleIssues: draft.styleIssues,
-          wordCount: draft.wordCount,
-          editedBody: null,
-          disclaimerEnabled: null,
-          state: "draft",
-          origin: "generated",
-          docxPath: null,
-          createdAt: new Date().toISOString(),
-        };
-      }
+      const letter = job.status === "new" ? await maybeLetter(job, fit) : undefined;
+      if (letter) counts[raw.source].letters += 1;
       counts[raw.source].new += 1;
       planned.push({ job, fit, letter, raw: { source: raw.source, externalId: raw.externalId, payload: raw } });
     }
 
+    if (planned.some((item) => item.job.status === "unscored") || snapshot.jobs.some((job) => job.status === "unscored")) {
+      warnings.push("Some roles are still unscored. They stay on the list for the next run.");
+    }
+
     const finished = new Date();
-    const worthALook = planned.filter((item) => item.job.status === "new").length;
+    const worthALook =
+      planned.filter((item) => item.job.status === "new").length + backlogScored.filter((item) => item.status === "new").length;
     const run: Run = {
       id: `run-${started.getTime()}`,
       startedAt: started.toISOString(),
@@ -258,6 +276,39 @@ export async function runPipeline(options: {
     run.digestHtml = buildDigest(run, top);
 
     updateStore((store) => {
+      for (const update of backlogScored) {
+        const job = store.jobs.find((item) => item.id === update.id);
+        if (!job) continue;
+        const from = job.status;
+        job.status = update.status;
+        job.filteredReason = null;
+        job.statusChangedAt = finished.toISOString();
+        store.fitAssessments.push({
+          id: `fit-${job.id}-${finished.getTime()}`,
+          jobId: job.id,
+          model: update.fit.model,
+          promptVersion: update.fit.promptVersion,
+          score: update.fit.score,
+          summary: update.fit.summary,
+          matches: update.fit.matches,
+          gaps: update.fit.gaps,
+          blockers: update.fit.blockers,
+          flags: update.fit.flags,
+          seniorityFit: update.fit.seniorityFit,
+          locationFit: update.fit.locationFit,
+          salaryNote: update.fit.salaryNote,
+          createdAt: finished.toISOString(),
+        });
+        if (update.letter) store.letters.push(update.letter);
+        store.statusEvents.push({
+          id: `event-backlog-${job.id}-${finished.getTime()}`,
+          jobId: job.id,
+          from,
+          to: update.status,
+          at: finished.toISOString(),
+          by: "pipeline",
+        });
+      }
       for (const merge of sourceMerges) {
         const match = store.jobs.find((job) => job.dedupeKey === merge.dedupeKey);
         if (match && !match.sources.some((current) => current.url === merge.url)) match.sources.push(merge.source);
@@ -339,6 +390,22 @@ export async function runPipeline(options: {
     });
     return { ok: false, message: error instanceof Error ? error.message : "Run failed" };
   }
+}
+
+function scoreInput(job: Job) {
+  return {
+    title: job.title,
+    company: job.company,
+    location: job.location,
+    workPattern: job.workPattern,
+    europeRemote: job.europeRemote,
+    description: job.descriptionText,
+    salaryMin: job.salaryMin,
+    salaryMax: job.salaryMax,
+    salaryPeriod: job.salaryPeriod,
+    currency: job.currency,
+    contractType: job.contractType,
+  };
 }
 
 function blank(demo: boolean): Run["counts"]["linkedin"] {

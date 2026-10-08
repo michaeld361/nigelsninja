@@ -28,7 +28,7 @@ export async function signInWithEmail(formData: FormData): Promise<ActionResult>
   const email = String(formData.get("email") || "");
   const user = findAllowed(email);
   if (!user) {
-    return { ok: false, message: "That email is not on the allow-list. No session was created." };
+    return { ok: false, message: "That email is not one this site can sign in." };
   }
   const token = crypto.randomUUID();
   updateStore((store) => {
@@ -47,7 +47,7 @@ export async function signInWithEmail(formData: FormData): Promise<ActionResult>
   const { magicLinkEmail } = await import("@/pipeline/brand-email");
   const mail = magicLinkEmail(`${base}${link}`);
   const sent = await sendEmail(user.email, mail.subject, mail.html);
-  if (sent.sent) return { ok: true, message: `A sign-in link was sent to ${user.email}.` };
+  if (sent.sent) return { ok: true, message: `The sign-in link is on its way to ${user.email}.` };
   return { ok: true, link, message: sent.error || "The email was not sent." };
 }
 
@@ -120,6 +120,9 @@ export async function setJobStatus(jobId: string, status: JobStatus): Promise<Ac
   if (missing) return { ok: false, message: "That role is no longer in the queue." };
   revalidatePath("/today");
   revalidatePath("/pipeline");
+  revalidatePath("/jobs");
+  revalidatePath("/low-fit");
+  revalidatePath("/filtered");
   revalidatePath(`/jobs/${jobId}`);
   return { ok: true };
 }

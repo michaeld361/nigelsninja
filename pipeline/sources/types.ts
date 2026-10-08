@@ -6,6 +6,7 @@ export type SourceResult = {
   demo: boolean;
   error: string | null;
   fetched: number;
+  capHits?: string[];
 };
 
 export type JobSource = {

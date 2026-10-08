@@ -97,7 +97,7 @@ export function SettingsForm({ profile, settings, files }: { profile: Profile; s
               <Input name="radius" type="number" className="mt-1" defaultValue={settings.radiusMiles} />
             </label>
           </div>
-          <p className="text-sm text-muted-foreground">Locations: London plus the radius, and UK remote. Europe-remote roles are shown and scored down. On-site roles outside the radius are filtered.</p>
+          <p className="text-sm text-muted-foreground">Locations: London plus the radius, and UK remote. An on-site role is filtered only when it names one place outside that radius and never mentions remote or hybrid. Contract and day-rate stay on.</p>
           <div className="flex flex-wrap gap-3 text-sm">
             {(Object.keys(settings.contractTypes) as (keyof Settings["contractTypes"])[]).map((contract) => (
               <label key={contract} className="flex items-center gap-2">

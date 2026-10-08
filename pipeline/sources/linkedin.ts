@@ -1,6 +1,7 @@
 import { ApifyClient } from "apify-client";
 import type { ContractType, RawJob, SalaryPeriod, SearchParams, WorkPattern } from "@/lib/types";
 import { fixtureJobs } from "../fixtures";
+import { chunkBudget, chunkPhrases, rowCapNotes, rowsForLookback } from "../search-plan";
 import type { SourceResult } from "./types";
 
 type ActorItem = {
@@ -34,47 +35,75 @@ export async function searchLinkedIn(params: SearchParams): Promise<SourceResult
   try {
     const client = new ApifyClient({ token: process.env.APIFY_TOKEN });
     const actor = process.env.APIFY_LINKEDIN_ACTOR || "bebity/linkedin-jobs-scraper";
-    const titles = params.phrases.slice(0, 8);
     const locations = params.locations.map((location) => location.label).slice(0, 2);
-    const run = await client.actor(actor).call(
-      {
-        titles,
-        locations,
-        publishedAt: params.lookbackHours <= 24 ? "r86400" : "r604800",
-        rows: 12,
-        companyProfile: true,
-        enrichCompany: false,
-      },
-      { waitSecs: 180 },
-    );
-    const dataset = await client.dataset(run.defaultDatasetId).listItems();
-    const jobs: RawJob[] = (dataset.items as ActorItem[])
-      .filter((item) => item.title && item.companyName)
-      .map((item) => {
-        const listingUrl = item.jobUrl || item.link || "";
-        const postedAt = listingDate(item);
-        const poster = item.posterFullName ? `\n\nPosted on LinkedIn by ${item.posterFullName}.` : "";
-        return {
-          source: "linkedin" as const,
-          externalId: String(item.id || listingUrl || `${item.companyName}-${item.title}`),
-          title: item.title || "",
-          company: item.companyName || "",
-          location: item.location || "",
-          description: `${item.descriptionText || item.description || ""}${poster}`.trim(),
-          listingUrl,
-          applyUrl: item.applyUrl || listingUrl,
-          postedAt,
-          salaryMin: numberOrNull(item.salaryMin),
-          salaryMax: numberOrNull(item.salaryMax),
-          salaryPeriod: period(item.salaryPeriod),
-          currency: item.salaryCurrency || "GBP",
-          contractType: contract(item.contractType),
-          workPattern: pattern(item.workType),
-          demo: false,
-          publisher: "LinkedIn",
-        };
-      });
-    return { source: "linkedin", jobs, demo: false, error: null, fetched: jobs.length };
+    const rows = rowsForLookback(params.lookbackHours);
+    const publishedAt = params.lookbackHours <= 24 ? "r86400" : "r604800";
+    const chunks = chunkPhrases(params.phrases);
+    const budget = chunkBudget(params.lookbackHours, chunks.length);
+    const jobs: RawJob[] = [];
+    const seen = new Set<string>();
+    const capHits: string[] = [];
+    const errors: string[] = [];
+    for (const titles of chunks) {
+      try {
+        const run = await client.actor(actor).call(
+          {
+            titles,
+            locations,
+            publishedAt,
+            rows,
+            companyProfile: true,
+            enrichCompany: false,
+          },
+          { waitSecs: 180, maxItems: budget.maxItems, maxTotalChargeUsd: budget.usd },
+        );
+        const dataset = await client.dataset(run.defaultDatasetId).listItems();
+        const items = (dataset.items as ActorItem[]).filter((item) => item.title && item.companyName);
+        const phraseCounts = countByPhrase(items, titles);
+        const notes = rowCapNotes({ phrases: titles, locations, rows, returned: items.length, phraseCounts });
+        for (const note of notes) {
+          capHits.push(note);
+          console.log(JSON.stringify({ event: "linkedin-row-cap", note, rows, phrases: titles }));
+        }
+        for (const item of items) {
+          const listingUrl = item.jobUrl || item.link || "";
+          const externalId = String(item.id || listingUrl || `${item.companyName}-${item.title}`);
+          if (seen.has(externalId)) continue;
+          seen.add(externalId);
+          const postedAt = listingDate(item);
+          const poster = item.posterFullName ? `\n\nPosted on LinkedIn by ${item.posterFullName}.` : "";
+          jobs.push({
+            source: "linkedin",
+            externalId,
+            title: item.title || "",
+            company: item.companyName || "",
+            location: item.location || "",
+            description: `${item.descriptionText || item.description || ""}${poster}`.trim(),
+            listingUrl,
+            applyUrl: item.applyUrl || listingUrl,
+            postedAt,
+            salaryMin: numberOrNull(item.salaryMin),
+            salaryMax: numberOrNull(item.salaryMax),
+            salaryPeriod: period(item.salaryPeriod),
+            currency: item.salaryCurrency || "GBP",
+            contractType: contract(item.contractType),
+            workPattern: pattern(item.workType),
+            demo: false,
+            publisher: "LinkedIn",
+          });
+        }
+      } catch (error) {
+        errors.push(error instanceof Error ? error.message : "LinkedIn source failed");
+      }
+    }
+    return {
+      source: "linkedin",
+      jobs,
+      demo: false,
+      error: errors.length && !jobs.length ? errors[0] : null,
+      fetched: jobs.length,
+      capHits,
+    };
   } catch (error) {
     return {
       source: "linkedin",
@@ -84,6 +113,20 @@ export async function searchLinkedIn(params: SearchParams): Promise<SourceResult
       fetched: 0,
     };
   }
+}
+
+function countByPhrase(items: ActorItem[], phrases: string[]): Map<string, number> {
+  const counts = new Map<string, number>();
+  for (const item of items) {
+    const raw = item as ActorItem & Record<string, unknown>;
+    const hint = ["searchTitle", "query", "keyword", "titleQuery", "searchQuery"]
+      .map((key) => raw[key])
+      .find((value): value is string => typeof value === "string" && value.length > 0);
+    if (!hint) continue;
+    const phrase = phrases.find((title) => hint.toLowerCase().includes(title.toLowerCase())) || hint;
+    counts.set(phrase, (counts.get(phrase) || 0) + 1);
+  }
+  return counts;
 }
 
 function listingDate(item: ActorItem): string {

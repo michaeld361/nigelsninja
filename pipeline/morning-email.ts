@@ -120,13 +120,13 @@ function render(input: { weekday: string; date: string; base: string; rows: Row[
         <p style="margin:0;font-family:'Bricolage Grotesque',Georgia,sans-serif;font-weight:700;font-size:34px;line-height:1;letter-spacing:-.02em;color:#F2F1EC;">nigelsninja<span style="color:#FF6B5B;">.</span></p>
         <p style="margin:10px 0 0;font-family:'Geist Mono',ui-monospace,monospace;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:rgba(242,241,236,.5);">Jobs · ${escapeHtml(input.date)}</p>
         <h1 style="margin:14px 0 0;font-family:'Bricolage Grotesque',Georgia,sans-serif;font-weight:700;font-size:64px;line-height:.9;letter-spacing:-.03em;color:#F2F1EC;">${escapeHtml(input.weekday)}</h1>
-        <p style="margin:28px 0 0;max-width:42em;font-size:20px;line-height:1.45;color:rgba(242,241,236,.72);">Nigel, these are the roles that arrived since yesterday. Anything older is still on the site, and nothing has been sent for you.</p>
-        ${strong.length ? sectionLabel("A strong fit") : ""}
-        ${strong.length ? `<p style="margin:12px 0 0;font-size:17px;line-height:1.5;color:rgba(242,241,236,.72);">These sit closest to your CV. No hard mismatch came up in the fit check.</p>` : ""}
+        <p style="margin:28px 0 0;max-width:42em;font-size:20px;line-height:1.45;color:rgba(242,241,236,.72);">Nigel, here is what came in since yesterday. Older roles are still on the site, and nothing has been sent for you.</p>
+        ${strong.length ? sectionLabel("Strong fit") : ""}
+        ${strong.length ? `<p style="margin:12px 0 0;font-size:17px;line-height:1.5;color:rgba(242,241,236,.72);">These sit closest to your CV. The fit check did not find a hard mismatch.</p>` : ""}
         ${strong.map((row) => jobBlock(row, input.base)).join("")}
         ${rest.length ? sectionLabel(strong.length ? "Also new" : "New since yesterday") : ""}
         ${rest.map((row) => jobBlock(row, input.base)).join("")}
-        ${input.rows.length ? "" : `<p style="margin:40px 0 0;font-family:'Bricolage Grotesque',Georgia,sans-serif;font-weight:700;font-size:28px;font-style:italic;color:rgba(242,241,236,.5);">Nothing new arrived in the last day. The search is still running, and a good role will show up here when it does.</p>`}
+        ${input.rows.length ? "" : `<p style="margin:40px 0 0;font-family:'Bricolage Grotesque',Georgia,sans-serif;font-weight:700;font-size:28px;font-style:italic;color:rgba(242,241,236,.5);">Nothing new in the last day. The search is still running, and a role worth your time will show up here when it does.</p>`}
         ${sectionLabel("The last day")}
         <table role="presentation" cellpadding="0" cellspacing="0" style="margin-top:8px;">
           <tr>

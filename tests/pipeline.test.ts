@@ -123,7 +123,14 @@ test("reads a spec as what they want and what Nigel should show", () => {
 });
 
 test("keeps real senior titles and drops junior ones", () => {
-  const keep = ["Senior Data Protection Specialist", "Data Governance Assistant Director", "Data Protection Officer", "Head of Privacy"];
+  const keep = [
+    "Senior Data Protection Specialist",
+    "Data Governance Assistant Director",
+    "Data Protection Officer",
+    "Head of Privacy",
+    "Privacy Officer",
+    "Assistant Data Protection Manager",
+  ];
   for (const title of keep) {
     const result = prefilterJob({ title, location: "London, hybrid", workPattern: "hybrid", contractType: "permanent" }, settings);
     assert.equal(result.keep, true, title);
@@ -132,13 +139,14 @@ test("keeps real senior titles and drops junior ones", () => {
     ["Data Protection Analyst", "Analyst"],
     ["Privacy Coordinator", "Coordinator"],
     ["Data Protection Executive", "Executive"],
-    ["Privacy Officer", "Officer"],
-    ["Assistant Data Protection Manager", "Assistant"],
+    ["Privacy Trainee", "Trainee"],
+    ["Junior Privacy Manager", "Junior"],
+    ["Data Protection Administrator", "Administrator"],
   ] as const;
   for (const [title, word] of drop) {
     const result = prefilterJob({ title, location: "London", workPattern: "hybrid", contractType: "permanent" }, settings);
     assert.equal(result.keep, false, title);
-    assert.match(result.reason || "", new RegExp(word));
+    assert.match(result.reason || "", new RegExp(word, "i"));
   }
 });
 
@@ -154,16 +162,13 @@ test("states the last LinkedIn search in one London line", () => {
   );
 });
 
-test("drops roles that require a practising lawyer and keeps ones that work with lawyers", () => {
+test("drops a lawyer title and leaves a body mention for the scorer", () => {
   assert.equal(practisingQualificationReason("Privacy Operations Lead / Senior Counsel", "You will partner with the business."), PRACTISING_QUALIFICATION);
   assert.equal(
     practisingQualificationReason("Head of Privacy", "You must be a qualified lawyer with a current practising certificate."),
-    PRACTISING_QUALIFICATION,
+    null,
   );
-  assert.equal(
-    practisingQualificationReason("Head of Privacy", "Admission to the roll is essential."),
-    PRACTISING_QUALIFICATION,
-  );
+  assert.equal(practisingQualificationReason("Head of Privacy", "Admission to the roll is essential."), null);
   assert.equal(
     practisingQualificationReason("Compliance Manager", "Working closely with our Head of Compliance and our General Counsel."),
     null,
@@ -172,22 +177,18 @@ test("drops roles that require a practising lawyer and keeps ones that work with
     practisingQualificationReason("Data Protection Officer", "Partner with external legal counsel on supplier contracts."),
     null,
   );
-  assert.equal(
-    practisingQualificationReason("Data Protection Manager", "A legal qualification is desirable, not essential."),
-    null,
-  );
   const gated = prefilterJob(
     {
       title: "Head of Privacy",
       location: "London",
       workPattern: "hybrid",
       contractType: "permanent",
-      description: "Qualified solicitor required.",
+      description: "You must be a qualified solicitor. A current practising certificate is required.",
     },
     settings,
   );
-  assert.equal(gated.keep, false);
-  assert.equal(gated.reason, PRACTISING_QUALIFICATION);
+  assert.equal(gated.keep, true);
+  assert.equal(gated.reason, null);
 });
 
 test("drops on-site Leeds and flags Europe remote", () => {
@@ -231,7 +232,7 @@ test("a required solicitor caps the score at 40", () => {
     settings,
   );
   assert.ok(result.score <= 40);
-  assert.ok(result.blockers.some((item) => /solicitor/i.test(item)));
+  assert.ok(result.blockers.some((item) => /lawyer|solicitor/i.test(item)));
 });
 
 test("a generated letter follows the hard rules", () => {
@@ -321,9 +322,9 @@ test("a second run does not duplicate jobs or resurface an applied role", async 
   assert.equal(after.jobs.some((job) => /puregym/i.test(job.company)), false);
   const linklaters = after.jobs.find((job) => job.company === "Linklaters");
   assert.ok(linklaters);
-  assert.equal(linklaters.status, "filtered");
-  assert.equal(linklaters.filteredReason, PRACTISING_QUALIFICATION);
-  assert.equal(after.fitAssessments.some((item) => item.jobId === linklaters.id), false);
+  assert.equal(linklaters.status, "low_fit");
+  const linklatersFit = after.fitAssessments.find((item) => item.jobId === linklaters.id);
+  assert.ok(linklatersFit?.blockers.some((item) => /lawyer/i.test(item)));
   const generated = after.letters.filter((letter) => letter.origin === "generated");
   assert.ok(generated.length >= 5);
   for (const letter of generated) {

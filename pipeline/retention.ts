@@ -28,7 +28,7 @@ export function applyRetention(store: Store, now = Date.now()) {
 export function expireListings(store: Store, now = Date.now()) {
   for (const job of store.jobs) {
     if (!job.closesAt) continue;
-    if (!["new", "low_fit", "shortlisted"].includes(job.status)) continue;
+    if (!["new", "low_fit", "shortlisted", "unscored"].includes(job.status)) continue;
     if (new Date(job.closesAt).getTime() > now) continue;
     const from = job.status;
     job.status = "expired";

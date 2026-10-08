@@ -16,7 +16,7 @@ export default function MarketPage() {
         What the search <em className="text-[#FF6B5B] italic">actually</em> found
       </h1>
       <p className="mt-7 max-w-[52ch] text-xl leading-[1.45] text-[rgba(242,241,236,0.7)]">
-        Not another job list. A quiet look at the privacy roles this search has found, and what that suggests for your CV.
+        The privacy roles this search has kept, and what they suggest for your CV.
       </p>
 
       <section className="mt-16 grid grid-cols-1 gap-8 border-t border-[#F2F1EC] pt-6 md:grid-cols-[minmax(140px,180px)_minmax(0,1fr)] md:gap-8">

@@ -1,8 +1,11 @@
 import fs from "fs";
 import path from "path";
+import { dataDir } from "@/lib/store";
 import { sendMorningEmail } from "./morning-email";
 
-const statePath = path.join(process.cwd(), "data", "morning-email.json");
+function morningStatePath(): string {
+  return path.join(dataDir(), "morning-email.json");
+}
 
 type ScheduleState = {
   installedAt: string;
@@ -38,6 +41,14 @@ export function slotIsDue(nextRunAt: string, now = new Date()): boolean {
 
 export function armNextMorning(from = new Date()): string {
   return nextLondonSix(new Date(from.getTime() + 60 * 1000)).toISOString();
+}
+
+export function initialMorningNext(now = new Date()): string {
+  const today = londonDate(now);
+  const six = utcForLondonClock(today.year, today.month, today.day, 6, 0);
+  const since = now.getTime() - six.getTime();
+  if (since >= 0 && since <= 90 * 60 * 1000) return six.toISOString();
+  return nextLondonSix(now).toISOString();
 }
 
 export function nextLondonSix(from = new Date()): Date {
@@ -78,11 +89,12 @@ function utcForLondonClock(year: number, month: number, day: number, hour: numbe
 }
 
 function readState(): ScheduleState {
+  const statePath = morningStatePath();
   if (fs.existsSync(statePath)) return JSON.parse(fs.readFileSync(statePath, "utf8")) as ScheduleState;
   const now = new Date();
   const state: ScheduleState = {
     installedAt: now.toISOString(),
-    nextRunAt: nextLondonSix(now).toISOString(),
+    nextRunAt: initialMorningNext(now),
     lastRunAt: null,
     lastError: null,
     attempts: 0,
@@ -93,6 +105,7 @@ function readState(): ScheduleState {
 }
 
 function writeState(state: ScheduleState) {
+  const statePath = morningStatePath();
   fs.mkdirSync(path.dirname(statePath), { recursive: true });
   fs.writeFileSync(statePath, JSON.stringify(state, null, 2));
 }

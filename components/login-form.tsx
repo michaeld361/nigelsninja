@@ -11,15 +11,15 @@ export function LoginForm({ today }: { today: string }) {
 
   return (
     <div className="relative grid min-h-screen overflow-hidden bg-transparent text-[#F2F1EC] lg:grid-cols-2">
-      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_60%_50%_at_70%_110%,rgba(255,107,91,0.14),transparent_70%)]" />
-      <div className="relative flex flex-col justify-between px-5 py-8 sm:px-8 sm:py-10 md:px-12 md:py-12" style={{ animation: "fade .9s ease both" }}>
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_75%_60%_at_18%_46%,rgba(14,15,17,0.72),transparent_70%),radial-gradient(ellipse_68%_70%_at_80%_52%,rgba(14,15,17,0.66),transparent_72%)]" />
+      <div className="relative flex min-w-0 flex-col justify-between px-5 py-8 sm:px-8 sm:py-10 md:px-12 md:py-12" style={{ animation: "fade .9s ease both" }}>
         <div className="eyebrow">Private · Privacy search</div>
-        <div className="py-10 sm:py-16">
-          <div className="display -ml-[0.04em] text-[clamp(34px,10.5vw,52px)] leading-[0.85] sm:text-[clamp(72px,12vw,160px)]">
-            nigelsninja<span className="text-[#FF6B5B]">.</span>
+        <div className="@container min-w-0 py-10 sm:py-16">
+          <div className="display whitespace-nowrap text-[clamp(1.75rem,12.4cqi,5.25rem)] leading-[0.9]">
+            nigelsninja<span className="ninja-dot" aria-hidden="true" />
           </div>
-          <p className="mt-7 max-w-[38ch] text-xl leading-[1.45] text-[rgba(242,241,236,0.72)]">
-            Your LinkedIn search, and a letter when a role is worth your time. <em className="text-[#F2F1EC] italic">You are the one who sends it.</em>
+          <p className="mt-7 max-w-[34ch] text-lg leading-[1.45] text-[rgba(242,241,236,0.86)] sm:text-xl">
+            Your privacy roles from LinkedIn, with a letter when one is worth sending.
           </p>
         </div>
         <div className="font-mono text-[11px] tracking-[0.08em] text-[rgba(242,241,236,0.4)]">{today}</div>

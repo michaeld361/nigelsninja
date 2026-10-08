@@ -1,5 +1,7 @@
 import fs from "fs";
 import path from "path";
+import type { Store } from "../lib/types";
+import { ensureContractTypes, replayFiltered } from "../pipeline/replay-filter";
 
 const dir = process.env.DATA_DIR || path.join(process.cwd(), "data");
 const target = path.join(dir, "store.json");
@@ -11,4 +13,12 @@ if (!fs.existsSync(target) && fs.existsSync(snapshot) && path.resolve(snapshot) 
   console.log(JSON.stringify({ bootstrapped: true }));
 } else {
   console.log(JSON.stringify({ bootstrapped: false }));
+}
+
+if (fs.existsSync(target)) {
+  const store = JSON.parse(fs.readFileSync(target, "utf8")) as Store;
+  const contracts = ensureContractTypes(store);
+  const replay = replayFiltered(store);
+  if (contracts || replay.released > 0) fs.writeFileSync(target, JSON.stringify(store));
+  console.log(JSON.stringify({ replay: true, released: replay.released, kept: replay.kept, contracts }));
 }

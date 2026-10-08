@@ -1,4 +1,4 @@
-import { SCORE_PROMPT_VERSION } from "@/lib/defaults";
+import { LONDON_RADIUS, SCORE_PROMPT_VERSION } from "@/lib/defaults";
 import { titleMatchesPhrase } from "@/lib/text";
 import type { FitAssessment, Settings } from "@/lib/types";
 import { callClaude, extractJson } from "./llm";
@@ -67,31 +67,67 @@ const LACK = [
   { label: "French language", keys: ["fluent in french", "french speaker"] },
 ];
 
-export function legalSignal(text: string): "blocker" | "flag" | null {
-  const chunks = text.split(/[\n•]/);
-  let flag = false;
-  for (const chunk of chunks) {
-    const s = chunk.toLowerCase();
-    const mentions =
-      /qualified solicitor|practising solicitor|practicing solicitor|qualified lawyer|practising lawyer|practicing lawyer|legally qualified|practising certificate|practicing certificate|qualified uk solicitor/.test(
-        s,
-      );
-    if (!mentions) continue;
-    const soft = /prefer|ideal|desirable|advantage|beneficial|nice to have|not essential|or equivalent experience/.test(s);
-    const hard = /must|required|essential|you will be|need to be|requirement|we are seeking a qualified|qualified uk solicitor/.test(s);
-    if (hard && !soft) return "blocker";
-    if (soft) flag = true;
-    else flag = true;
-  }
-  return flag ? "flag" : null;
+export const BLOCKER_LAWYER = "Qualified lawyer required";
+export const BLOCKER_CLEARANCE = "Security clearance required";
+export const BLOCKER_LOCATION = "Must be based somewhere specific outside the area";
+export const BLOCKER_LANGUAGE = "A language other than English is required";
+
+const PERMITTED_BLOCKERS = [BLOCKER_LAWYER, BLOCKER_CLEARANCE, BLOCKER_LOCATION, BLOCKER_LANGUAGE];
+
+function sentencesOf(text: string): string[] {
+  return text.split(/[\n.•]+/);
 }
 
-export function clearanceSignal(text: string): "blocker" | "flag" | null {
-  const s = text.toLowerCase();
-  if (!/clearance|developed vetting/.test(s)) return null;
-  if (/ability to obtain|desirable|ideally|preferred/.test(s)) return "flag";
-  if (/must hold|clearance required|essential/.test(s)) return "blocker";
-  return "flag";
+function hardLawyer(text: string): boolean {
+  return /\bmust be a qualified solicitor\b/i.test(text) || /\bpracti[sc]ing certificate\b/i.test(text) || /\badmitted to practi[sc]e\b/i.test(text);
+}
+
+function softLegal(text: string): boolean {
+  if (/\blaw degree or equivalent experience\b/i.test(text)) return true;
+  return /\blegal qualification\b/i.test(text) && /\b(desirable|preferred|advantage|ideal|beneficial|nice to have)\b/i.test(text);
+}
+
+function hardClearance(text: string): boolean {
+  for (const sentence of sentencesOf(text)) {
+    if (!/clearance|developed vetting/i.test(sentence)) continue;
+    if (/\b(ability to obtain|willing to|desirable|ideally|preferred|advantage)\b/i.test(sentence)) continue;
+    if (/\b(must hold|clearance required|security clearance required|essential)\b/i.test(sentence)) return true;
+  }
+  return false;
+}
+
+function hardLanguage(text: string): boolean {
+  const language = /\b(welsh|french|german|spanish|mandarin|cantonese|arabic|polish|dutch|italian|portuguese|japanese|korean|hindi|urdu|gaelic)\b/i;
+  for (const sentence of sentencesOf(text)) {
+    if (!language.test(sentence)) continue;
+    if (/\b(desirable|advantage|ideally|preferred|nice to have|not essential)\b/i.test(sentence)) continue;
+    if (/\b(must|required|essential|need to|fluent)\b/i.test(sentence)) return true;
+  }
+  return false;
+}
+
+function hardOutsideBase(text: string): boolean {
+  const match = text.match(/\bmust be based in ([^.\n]+)/i) || text.match(/\bmust (?:live|be located) in ([^.\n]+)/i);
+  if (!match) return false;
+  const place = match[1].toLowerCase();
+  if (/united kingdom|\bengland\b|\blondon\b|\bremote\b|\bhybrid\b/.test(place)) return false;
+  if (LONDON_RADIUS.some((item) => place.includes(item))) return false;
+  return true;
+}
+
+export function closedBlockers(text: string): string[] {
+  const blockers: string[] = [];
+  if (hardLawyer(text)) blockers.push(BLOCKER_LAWYER);
+  if (hardClearance(text)) blockers.push(BLOCKER_CLEARANCE);
+  if (hardOutsideBase(text)) blockers.push(BLOCKER_LOCATION);
+  if (hardLanguage(text)) blockers.push(BLOCKER_LANGUAGE);
+  return blockers;
+}
+
+export function permitBlockers(candidates: string[], detected: string[]): { blockers: string[]; gaps: string[] } {
+  const blockers = detected.filter((item) => PERMITTED_BLOCKERS.includes(item));
+  const gaps = candidates.filter((item) => !PERMITTED_BLOCKERS.includes(item));
+  return { blockers, gaps };
 }
 
 function salaryNote(input: ScoreInput): string {
@@ -170,14 +206,14 @@ export function scoreLocal(input: ScoreInput, settings: Settings): ScoreResult {
     ? "Manager to director level, which is the range he is searching."
     : "The title sits below the manager level he is aiming for.";
 
-  const blockers: string[] = [];
+  const blockers = closedBlockers(`${input.title}\n${input.description}`);
   const flags: string[] = [];
-  const legal = legalSignal(input.description + "\n" + input.title);
-  if (legal === "blocker") blockers.push("The spec requires a qualified solicitor. Nigel is not one.");
-  if (legal === "flag") flags.push("A legal qualification is preferred, not required. The letter should say he is not a solicitor.");
-  const clearance = clearanceSignal(input.description);
-  if (clearance === "blocker") blockers.push("The spec requires a security clearance he does not hold.");
-  if (clearance === "flag") flags.push("Security clearance is mentioned as desirable or as something he could obtain. He does not currently hold one.");
+  if (softLegal(`${input.title}\n${input.description}`)) {
+    flags.push("A legal qualification is desirable, not required. The letter should say he is not a solicitor.");
+  }
+  if (!blockers.includes(BLOCKER_CLEARANCE) && /clearance|developed vetting/i.test(input.description)) {
+    flags.push("Security clearance is mentioned, and it is not a hard requirement.");
+  }
 
   let score = role + must + sector + location + seniority;
   if (blockers.length) score = Math.min(score, 40);
@@ -216,7 +252,7 @@ export async function scoreJob(input: ScoreInput, settings: Settings, profileTex
   if (!process.env.ANTHROPIC_API_KEY) return local;
   const model = process.env.SCORING_MODEL || "claude-sonnet-5-5";
   try {
-    const system = `You score UK data privacy jobs for Nigel Down. Return JSON only with keys score (0-100), summary (two or three sentences), matches, gaps, blockers, seniority_fit, location_fit, salary_note. Rubric: role and responsibilities 40, must-have requirements 25, sector and context 15, location and working pattern 10, seniority 10. A hard blocker (qualified solicitor required, on site outside his area, security clearance he lacks) caps the score at 40. Use only the profile. Do not invent experience.`;
+    const system = `You score UK data privacy jobs for Nigel Down. Return JSON only with keys score (0-100), summary (two or three sentences), matches, gaps, blockers, seniority_fit, location_fit, salary_note. Rubric: role and responsibilities 40, must-have requirements 25, sector and context 15, location and working pattern 10, seniority 10. Blockers is a closed list. The only permitted blockers are: qualified lawyer required, security clearance required, must be based somewhere specific outside the area, a language other than English. Anything else is a gap. A gap lowers the score and does not gate. Do not invent blockers. Use only the profile. Do not invent experience.`;
     const user = `<profile>\n${profileText.slice(0, 12000)}\n</profile>\n<job>\n${JSON.stringify(input).slice(0, 14000)}\n</job>\n<local_hint>\n${JSON.stringify(local)}\n</local_hint>`;
     const text = await callClaude({
       model,
@@ -226,14 +262,16 @@ export async function scoreJob(input: ScoreInput, settings: Settings, profileTex
       cacheSystem: true,
     });
     const parsed = ScoreSchema.parse(extractJson(text));
-    const blockers = parsed.blockers.length ? parsed.blockers : local.blockers;
+    const permitted = permitBlockers(parsed.blockers, local.blockers);
+    const blockers = permitted.blockers;
+    const gaps = [...new Set([...parsed.gaps, ...permitted.gaps, ...local.gaps])];
     let score = Math.max(0, Math.min(100, Math.round(parsed.score)));
     if (blockers.length) score = Math.min(score, 40);
     return {
       score,
       summary: parsed.summary,
       matches: parsed.matches,
-      gaps: parsed.gaps,
+      gaps,
       blockers,
       flags: local.flags,
       seniorityFit: parsed.seniority_fit,

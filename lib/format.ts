@@ -11,6 +11,7 @@ export const STATUS_LABEL: Record<JobStatus, string> = {
   rejected: "Rejected",
   skipped: "Skipped",
   filtered: "Filtered",
+  unscored: "Unscored",
   expired: "Expired",
 };
 
