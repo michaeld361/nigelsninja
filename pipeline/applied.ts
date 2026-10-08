@@ -1,3 +1,5 @@
+import { isApplicationStage } from "@/lib/stages";
+
 const NINETY_DAYS = 90 * 24 * 60 * 60 * 1000;
 
 export function alreadyAppliedMatch(input: {
@@ -7,7 +9,7 @@ export function alreadyAppliedMatch(input: {
   jobs: { id: string; status: string; applicationKey: string; statusChangedAt: string }[];
   applications: { applicationKey: string; appliedAt: string }[];
 }): boolean {
-  if (input.jobs.some((job) => job.id === input.postingId && job.status === "applied")) return true;
+  if (input.jobs.some((job) => job.id === input.postingId && isApplicationStage(job.status))) return true;
   const cutoff = input.now - NINETY_DAYS;
   const recent = (iso: string) => {
     const time = new Date(iso).getTime();
@@ -15,6 +17,6 @@ export function alreadyAppliedMatch(input: {
   };
   if (input.applications.some((item) => item.applicationKey === input.applicationKey && recent(item.appliedAt))) return true;
   return input.jobs.some(
-    (job) => job.status === "applied" && job.applicationKey === input.applicationKey && recent(job.statusChangedAt),
+    (job) => isApplicationStage(job.status) && job.applicationKey === input.applicationKey && recent(job.statusChangedAt),
   );
 }

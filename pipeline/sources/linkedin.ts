@@ -1,7 +1,7 @@
 import { ApifyClient } from "apify-client";
 import type { ContractType, RawJob, SalaryPeriod, SearchParams, WorkPattern } from "@/lib/types";
 import { fixtureJobs } from "../fixtures";
-import { chunkBudget, chunkPhrases, rowCapNotes, rowsForLookback } from "../search-plan";
+import { chunkBudget, chunkPhrases, rowCapNotes, rowsForLookback, steadyLookback } from "../search-plan";
 import type { SourceResult } from "./types";
 
 type ActorItem = {
@@ -36,10 +36,11 @@ export async function searchLinkedIn(params: SearchParams): Promise<SourceResult
     const client = new ApifyClient({ token: process.env.APIFY_TOKEN });
     const actor = process.env.APIFY_LINKEDIN_ACTOR || "bebity/linkedin-jobs-scraper";
     const locations = params.locations.map((location) => location.label).slice(0, 2);
-    const rows = rowsForLookback(params.lookbackHours);
+    const budgetHours = params.steadyBudget ? steadyLookback(params.lookbackHours) : params.lookbackHours;
+    const rows = rowsForLookback(budgetHours);
     const publishedAt = params.lookbackHours <= 24 ? "r86400" : "r604800";
     const chunks = chunkPhrases(params.phrases);
-    const budget = chunkBudget(params.lookbackHours, chunks.length);
+    const budget = chunkBudget(budgetHours, chunks.length);
     const jobs: RawJob[] = [];
     const seen = new Set<string>();
     const capHits: string[] = [];

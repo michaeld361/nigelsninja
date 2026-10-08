@@ -119,7 +119,7 @@ test("reads a spec as what they want and what Nigel should show", () => {
   assert.equal(points.some((point) => point.want === "run DPIAs."), false);
   const onetrust = localSpecAnalysis("Must have hands-on OneTrust experience.", "CIPP/E only");
   assert.ok(onetrust.some((point) => /OneTrust/.test(point.want)));
-  assert.equal(historyNote(2), "A short history, 2 searches. The line will mean more as the two-hour looks accumulate.");
+  assert.equal(historyNote(2), "A short history, 2 searches. The line will mean more as the morning looks accumulate.");
 });
 
 test("keeps real senior titles and drops junior ones", () => {

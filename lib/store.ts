@@ -44,6 +44,8 @@ export function emptyStore(): Store {
     sessions: [],
     magicLinks: [],
     runLock: null,
+    searchFailure: null,
+    marketNote: null,
   };
 }
 
@@ -68,6 +70,8 @@ function ensureStoreFile() {
 
 function normalise(store: Store): Store {
   if (!store.applyPacks) store.applyPacks = [];
+  if (!store.searchFailure) store.searchFailure = null;
+  if (!store.marketNote) store.marketNote = null;
   for (const pack of store.applyPacks) {
     if (!pack.companySources) pack.companySources = [];
     if (!pack.lookingFor) pack.lookingFor = [];

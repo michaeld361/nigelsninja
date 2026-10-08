@@ -40,13 +40,14 @@ services:
       - key: SCORING_MODEL
         sync: false
 
-  # Every 2 hours. The web service runs the search against the disk.
+  # 5:00 London, including weekends. 04:00 UTC in summer, 05:00 UTC in winter.
+  # The handler searches only when London is actually at 5:00, so the two pings do not run twice.
   - type: cron
     name: nigelsninja-linkedin
     runtime: node
     region: frankfurt
     branch: main
-    schedule: "0 */2 * * *"
+    schedule: "0 4,5 * * *"
     buildCommand: corepack enable && corepack prepare pnpm@10.33.3 --activate && pnpm install --frozen-lockfile
     startCommand: pnpm exec tsx scripts/cron-call.ts linkedin
     envVars:

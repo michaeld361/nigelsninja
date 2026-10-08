@@ -1,5 +1,7 @@
+import { redactSecrets } from "@/lib/cron-auth";
 import { RUN_LOCK_MS } from "@/lib/cron-wait";
 import { RUN_CAPS } from "@/lib/defaults";
+import { lowFitReason } from "@/lib/low-fit-reason";
 import { loadStore, updateStore } from "@/lib/store";
 import { statedContract } from "@/lib/text";
 import type { FitAssessment, Job, Letter, Run, Settings, SourceId, Store } from "@/lib/types";
@@ -15,6 +17,7 @@ import { searchJSearch } from "./sources/jsearch";
 import { searchLinkedIn } from "./sources/linkedin";
 import { searchReed } from "./sources/reed";
 import type { SourceResult } from "./sources/types";
+import { writeMarketNote } from "./market-note";
 import { draftLetter } from "./write";
 
 export const DEFAULT_SOURCES: SourceId[] = ["linkedin"];
@@ -44,17 +47,28 @@ function enabledPhrases(settings: Settings): string[] {
   return settings.tiers.filter((tier) => tier.enabled).flatMap((tier) => tier.phrases);
 }
 
+export function claimRunLock(owner: string, holdExisting = false): boolean {
+  return updateStore((store) => {
+    const held = Boolean(store.runLock && new Date(store.runLock.until).getTime() > Date.now());
+    if (held && !holdExisting) return false;
+    if (!held) {
+      store.runLock = { until: new Date(Date.now() + RUN_LOCK_MS).toISOString(), owner };
+      store.searchFailure = null;
+    }
+    return true;
+  });
+}
+
 export async function runPipeline(options: {
   trigger: "cron" | "manual";
   by: string;
   sources?: SourceId[];
+  steadyBudget?: boolean;
+  /** The caller already holds the lock, so this run must not refuse itself. */
+  holdLock?: boolean;
 }): Promise<RunOutcome> {
   const started = new Date();
-  const locked = updateStore((store) => {
-    if (store.runLock && new Date(store.runLock.until).getTime() > Date.now()) return false;
-    store.runLock = { until: new Date(Date.now() + RUN_LOCK_MS).toISOString(), owner: options.by };
-    return true;
-  });
+  const locked = claimRunLock(options.by, Boolean(options.holdLock));
   if (!locked) return { ok: false, message: "A run is already in progress." };
 
   try {
@@ -70,6 +84,7 @@ export async function runPipeline(options: {
       radiusMiles: snapshot.settings.radiusMiles,
       lookbackHours,
       contractTypes,
+      steadyBudget: options.steadyBudget,
     };
     const sourceIds = options.sources ?? DEFAULT_SOURCES;
     const results: SourceResult[] = [];
@@ -114,7 +129,15 @@ export async function runPipeline(options: {
 
     console.log(JSON.stringify({ event: "pipeline-score", candidates: candidates.length, lookbackHours }));
     const profile = profileBlock(snapshot);
-    for (const waiting of snapshot.jobs.filter((job) => job.status === "unscored")) {
+    const waitingForScore = snapshot.jobs.filter((job) => {
+      if (job.status === "unscored") return true;
+      if (job.status !== "low_fit") return false;
+      const fit = snapshot.fitAssessments
+        .filter((item) => item.jobId === job.id)
+        .sort((a, b) => b.createdAt.localeCompare(a.createdAt))[0];
+      return !lowFitReason(fit);
+    });
+    for (const waiting of waitingForScore) {
       if (scored >= RUN_CAPS.scored) break;
       const fit = await scoreJob(scoreInput(waiting), snapshot.settings, profile);
       scored += 1;
@@ -368,6 +391,7 @@ export async function runPipeline(options: {
       applyRetention(store);
       store.runs.unshift(run);
       store.runLock = null;
+      store.searchFailure = null;
     });
 
     if (snapshot.settings.digestEnabled) {
@@ -385,12 +409,24 @@ export async function runPipeline(options: {
     if (errors.length && process.env.RESEND_API_KEY && process.env.ALERT_TO) {
       await sendEmail(process.env.ALERT_TO, "Job search source warning", `<p>${errors.join("<br>")}</p>`);
     }
+    if (!counts.linkedin.error) {
+      try {
+        const note = await writeMarketNote(loadStore(), run.id);
+        updateStore((store) => {
+          store.marketNote = note;
+        });
+      } catch {
+        /* The search is already saved. A missing note can be written on the next run. */
+      }
+    }
     return { ok: true, run: loadStore().runs.find((item) => item.id === run.id) || run };
   } catch (error) {
+    const message = redactSecrets(error instanceof Error ? error.message : "The search did not finish.");
     updateStore((store) => {
       store.runLock = null;
+      store.searchFailure = { at: new Date().toISOString(), message };
     });
-    return { ok: false, message: error instanceof Error ? error.message : "Run failed" };
+    return { ok: false, message };
   }
 }
 

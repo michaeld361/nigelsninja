@@ -11,8 +11,9 @@ import { clearSessionCookie, createSession, findAllowed, getSession, sessionCook
 import { defaultSettings } from "@/lib/defaults";
 import { dataDir, emptyStore, loadStore, updateStore } from "@/lib/store";
 import type { ContractType, JobStatus, KeywordTier } from "@/lib/types";
+import { isApplicationStage, STAGE_LABEL, type ApplicationStage } from "@/lib/stages";
 import { createPreparingPack, finishApplyPack } from "@/pipeline/apply-pack";
-import { runPipeline } from "@/pipeline/run";
+import { claimRunLock, runPipeline } from "@/pipeline/run";
 import { draftLetter } from "@/pipeline/write";
 import { latestFit } from "@/pipeline/run";
 
@@ -357,10 +358,101 @@ function publicError(message: string): string {
 export async function runLinkedInSearch(): Promise<ActionResult> {
   const session = await actor();
   if (!session) return { ok: false, message: "Sign in again." };
-  const result = await runPipeline({ trigger: "manual", by: session.email, sources: ["linkedin"] });
-  revalidatePath("/jobs");
-  if (!result.ok) return { ok: false, message: publicError(result.message) };
+  if (!claimRunLock(session.email)) return { ok: false, message: "A run is already in progress." };
+  after(() => runPipeline({ trigger: "manual", by: session.email, sources: ["linkedin"], steadyBudget: true, holdLock: true }));
   return { ok: true };
+}
+
+export async function markApplied(jobId: string): Promise<ActionResult> {
+  const session = await actor();
+  if (!session) return { ok: false, message: "Sign in again." };
+  const missing = updateStore((store) => {
+    const job = store.jobs.find((item) => item.id === jobId);
+    if (!job) return true;
+    const now = new Date().toISOString();
+    if (!isApplicationStage(job.status)) {
+      const from = job.status;
+      job.status = "applied";
+      job.statusChangedAt = now;
+      store.statusEvents.push({ id: crypto.randomUUID(), jobId, from, to: "applied", at: now, by: session.email });
+    }
+    const existing = store.applications.find((item) => item.jobId === jobId);
+    if (!existing) {
+      store.applications.push({
+        id: crypto.randomUUID(),
+        jobId,
+        company: job.company,
+        title: job.title,
+        applicationKey: job.applicationKey,
+        appliedAt: job.statusChangedAt,
+        outcome: "Applied",
+        outcomeAt: job.statusChangedAt,
+      });
+    } else if (!existing.outcome) {
+      existing.outcome = "Applied";
+      existing.outcomeAt = existing.outcomeAt || job.statusChangedAt;
+    }
+    return false;
+  });
+  if (missing) return { ok: false, message: "That role is no longer here." };
+  revalidatePath("/apply");
+  revalidatePath("/applied");
+  revalidatePath("/jobs");
+  revalidatePath(`/jobs/${jobId}`);
+  revalidatePath(`/apply/${jobId}`);
+  return { ok: true };
+}
+
+export async function setApplicationStage(jobId: string, stage: ApplicationStage): Promise<ActionResult> {
+  const session = await actor();
+  if (!session) return { ok: false, message: "Sign in again." };
+  if (!isApplicationStage(stage)) return { ok: false, message: "That stage is not one of these." };
+  const missing = updateStore((store) => {
+    const job = store.jobs.find((item) => item.id === jobId);
+    if (!job) return "missing" as const;
+    if (!isApplicationStage(job.status)) return "early" as const;
+    const now = new Date().toISOString();
+    const from = job.status;
+    job.status = stage;
+    job.statusChangedAt = now;
+    if (from !== stage) {
+      store.statusEvents.push({ id: crypto.randomUUID(), jobId, from, to: stage, at: now, by: session.email });
+    }
+    const existing = store.applications.find((item) => item.jobId === jobId);
+    if (existing) {
+      existing.outcome = STAGE_LABEL[stage];
+      existing.outcomeAt = now;
+    } else {
+      store.applications.push({
+        id: crypto.randomUUID(),
+        jobId,
+        company: job.company,
+        title: job.title,
+        applicationKey: job.applicationKey,
+        appliedAt: now,
+        outcome: STAGE_LABEL[stage],
+        outcomeAt: now,
+      });
+    }
+    return "ok" as const;
+  });
+  if (missing === "missing") return { ok: false, message: "That role is no longer here." };
+  if (missing === "early") return { ok: false, message: "Mark it Applied first." };
+  revalidatePath("/applied");
+  revalidatePath("/apply");
+  revalidatePath(`/jobs/${jobId}`);
+  revalidatePath(`/apply/${jobId}`);
+  return { ok: true };
+}
+
+export async function linkedInSearchStatus(): Promise<{ searching: boolean; error: string | null }> {
+  const session = await actor();
+  if (!session) return { searching: false, error: "Sign in again." };
+  const store = loadStore();
+  const searching = Boolean(store.runLock && new Date(store.runLock.until).getTime() > Date.now());
+  if (searching) return { searching: true, error: null };
+  const message = store.searchFailure?.message || null;
+  return { searching: false, error: message ? publicError(message) : null };
 }
 
 export async function runNow(source?: "linkedin" | "reed" | "jsearch"): Promise<ActionResult> {

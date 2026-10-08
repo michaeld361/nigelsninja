@@ -41,9 +41,16 @@ async function main() {
 
   const started = Date.now();
   const posted = await request(`${base}/api/cron/${kind}`, "POST", secret, kind === "linkedin" ? CRON_HTTP_MS : 3 * 60 * 1000);
-  console.log(quiet(posted.body, secret));
+  const postedBody = quiet(posted.body, secret);
+  console.log(postedBody);
   if (posted.status < 200 || posted.status >= 300) process.exit(1);
   if (kind !== "linkedin") return;
+  try {
+    const startedBody = JSON.parse(postedBody) as { skipped?: string };
+    if (startedBody.skipped === "waiting") return;
+  } catch {
+    /* A body that is not JSON still gets polled. */
+  }
 
   const deadline = started + CRON_DEADLINE_MS;
   while (Date.now() < deadline) {

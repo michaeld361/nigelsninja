@@ -9,6 +9,7 @@ export const STATUS_LABEL: Record<JobStatus, string> = {
   interview: "Interview",
   offer: "Offer",
   rejected: "Rejected",
+  withdrawn: "Withdrawn",
   skipped: "Skipped",
   filtered: "Filtered",
   unscored: "Unscored",

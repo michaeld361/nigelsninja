@@ -4,7 +4,7 @@ import { useTransition } from "react";
 import { addToApplyList } from "@/app/actions";
 import { toast } from "sonner";
 
-export function AddToApply({ jobId, label = "Add to apply list" }: { jobId: string; label?: string }) {
+export function AddToApply({ jobId, label = "To apply" }: { jobId: string; label?: string }) {
   const [pending, start] = useTransition();
   return (
     <button

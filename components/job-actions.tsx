@@ -31,7 +31,7 @@ export function JobActions({
           });
         }}
       >
-        {pending && which === "add" ? "Adding…" : "Add to apply list"}
+        {pending && which === "add" ? "Adding…" : "To apply"}
       </button>
       {allowSkip ? (
         <button

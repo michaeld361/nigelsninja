@@ -6,10 +6,10 @@ import { signOut } from "@/app/actions";
 
 const sections = [
   { href: "/jobs", label: "Jobs", key: "jobs" as const },
-  { href: "/low-fit", label: "Low fit", key: "low" as const },
-  { href: "/filtered", label: "Filtered", key: "filtered" as const },
+  { href: "/apply", label: "To apply", key: "apply" as const },
+  { href: "/applied", label: "Applied", key: "applied" as const },
+  { href: "/skipped", label: "Skipped", key: "skipped" as const },
   { href: "/market", label: "Market", key: "market" as const },
-  { href: "/apply", label: "Apply list", key: "apply" as const },
 ];
 
 export function Shell({
@@ -21,7 +21,7 @@ export function Shell({
   children: React.ReactNode;
   name: string;
   role: "candidate" | "admin";
-  counts: { jobs: number; low: number; filtered: number; market: number; apply: number };
+  counts: { jobs: number; apply: number; applied: number; skipped: number; market: number };
 }) {
   const pathname = usePathname();
   return (

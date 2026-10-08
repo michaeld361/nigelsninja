@@ -63,8 +63,8 @@ function chartPoints(store: Store): MarketPoint[] {
 
 export function historyNote(count: number): string {
   if (count === 0) return "No search has finished yet. The first point appears after the next LinkedIn look.";
-  if (count === 1) return "One search so far. Each look, including the one every two hours, adds a point.";
-  if (count < 4) return `A short history, ${count} searches. The line will mean more as the two-hour looks accumulate.`;
+  if (count === 1) return "One search so far. Each morning's look adds a point.";
+  if (count < 4) return `A short history, ${count} searches. The line will mean more as the morning looks accumulate.`;
   return "Each point is one LinkedIn search, and the height is how many roles passed the filters.";
 }
 
@@ -95,6 +95,54 @@ function placeLabel(job: Job): string {
   if (job.workPattern === "hybrid" || /hybrid/.test(location)) return "Hybrid, London area";
   if (/london/.test(location)) return "London, on site";
   return job.location.split(",")[0] || "Other";
+}
+
+export function marketNoteFacts(store: Store): { titles: string[]; places: string[]; contracts: string[]; asks: string[] } {
+  const jobs = store.jobs.filter((job) => !job.demo && job.sources.some((source) => source.source === "linkedin") && job.status !== "filtered");
+  const titles = countTitleGroups(jobs)
+    .slice(0, 4)
+    .map((item) => (item.count > 1 ? `${item.label} (${item.count})` : item.label));
+  const places = countPlaces(jobs).slice(0, 4).map((item) => `${item.label} (${item.count})`);
+  const contracts = countContracts(jobs).map((item) => `${item.label} (${item.count})`);
+  const asks = countAsks(jobs.filter((job) => job.descriptionText.trim())).slice(0, 4).map((item) => item.label);
+  return { titles, places, contracts, asks };
+}
+
+export function marketFallback(facts: { titles: string[]; places: string[]; contracts: string[]; asks: string[] }): string {
+  const title = facts.titles[0] || "privacy roles";
+  const place = facts.places[0] || "the places you already set";
+  const ask = facts.asks[0];
+  const contract = facts.contracts[0];
+  const opening = `The roles in front of you are mostly ${title}, gathered around ${place}.`;
+  const rest = [ask ? `What they keep asking for is ${ask}.` : "", contract ? `The usual shape is ${contract}.` : "Open the ones that sound like the work you already do."]
+    .filter(Boolean)
+    .join(" ");
+  return `${opening} ${rest}`.trim();
+}
+
+export function acceptMarketNote(text: string): string | null {
+  const line = text.replace(/\s+/g, " ").trim();
+  if (line.length < 40 || line.length > 900) return null;
+  if (/as an ai|sorry|unable|error|\$|£/i.test(line)) return null;
+  return line;
+}
+
+function countContracts(jobs: Job[]): MarketBar[] {
+  const buckets = new Map<string, number>();
+  for (const job of jobs) {
+    const label = job.contractType === "permanent" ? "Permanent" : job.contractType === "contract" ? "Contract" : job.contractType === "part-time" ? "Part-time" : "Contract not stated";
+    buckets.set(label, (buckets.get(label) || 0) + 1);
+  }
+  return [...buckets.entries()].map(([label, count]) => ({ label, count })).sort((a, b) => b.count - a.count);
+}
+
+function countTitleGroups(jobs: Job[]): MarketBar[] {
+  const buckets = new Map<string, number>();
+  for (const job of jobs) {
+    const label = titleGroup(job.title);
+    buckets.set(label, (buckets.get(label) || 0) + 1);
+  }
+  return [...buckets.entries()].map(([label, count]) => ({ label, count })).sort((a, b) => b.count - a.count);
 }
 
 function countTitles(jobs: Job[]): MarketBar[] {

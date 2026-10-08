@@ -11,10 +11,8 @@ export default function MarketPage() {
   const lead = suggestion ? view.read.slice(0, -1) : view.read;
   return (
     <div className="rise">
-      <div className="eyebrow">Market · {searches} {searches === 1 ? "search" : "searches"}</div>
-      <h1 className="display mt-3.5 text-[clamp(40px,11vw,56px)] sm:text-[clamp(64px,9vw,112px)]">
-        What the search <em className="text-[#FF6B5B] italic">actually</em> found
-      </h1>
+      <div className="eyebrow">{searches} {searches === 1 ? "search" : "searches"}</div>
+      <h1 className="display mt-3.5 text-[clamp(40px,11vw,56px)] sm:text-[clamp(64px,9vw,112px)]">Market</h1>
       <p className="mt-7 max-w-[52ch] text-xl leading-[1.45] text-[rgba(242,241,236,0.7)]">
         The privacy roles this search has kept, and what they suggest for your CV.
       </p>
@@ -59,14 +57,24 @@ export default function MarketPage() {
       <section className="mt-14 grid grid-cols-1 gap-8 border-t border-[#F2F1EC] pt-6 md:grid-cols-[minmax(140px,180px)_minmax(0,1fr)]">
         <h2 className="font-[family-name:var(--font-bricolage)] text-2xl leading-[1.1] font-bold tracking-[-0.01em]">What this suggests</h2>
         <div className="flex max-w-[58ch] flex-col gap-[18px] text-[18.5px] leading-[1.55] text-[rgba(242,241,236,0.85)]">
-          {lead.map((paragraph) => (
-            <p key={paragraph.slice(0, 48)} className="m-0">
-              {paragraph}
-            </p>
-          ))}
-          {suggestion ? (
-            <p className="m-0 bg-[#F2F1EC] p-6 font-[family-name:var(--font-bricolage)] text-2xl leading-[1.3] font-bold text-[#0E0F11]">{suggestion}</p>
-          ) : null}
+          {store.marketNote?.text ? (
+            store.marketNote.text.split(/\n\n+/).map((paragraph) => (
+              <p key={paragraph.slice(0, 48)} className="m-0">
+                {paragraph}
+              </p>
+            ))
+          ) : (
+            <>
+              {lead.map((paragraph) => (
+                <p key={paragraph.slice(0, 48)} className="m-0">
+                  {paragraph}
+                </p>
+              ))}
+              {suggestion ? (
+                <p className="m-0 bg-[#F2F1EC] p-6 font-[family-name:var(--font-bricolage)] text-2xl leading-[1.3] font-bold text-[#0E0F11]">{suggestion}</p>
+              ) : null}
+            </>
+          )}
         </div>
       </section>
     </div>

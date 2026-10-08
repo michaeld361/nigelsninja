@@ -44,21 +44,34 @@ export function armNextMorning(from = new Date()): string {
 }
 
 export function initialMorningNext(now = new Date()): string {
-  const today = londonDate(now);
-  const six = utcForLondonClock(today.year, today.month, today.day, 6, 0);
-  const since = now.getTime() - six.getTime();
-  if (since >= 0 && since <= 90 * 60 * 1000) return six.toISOString();
-  return nextLondonSix(now).toISOString();
+  return initialLondonSlot(6, now);
+}
+
+export function nextLondonHour(hour: number, from = new Date()): Date {
+  const today = londonDate(from);
+  let target = utcForLondonClock(today.year, today.month, today.day, hour, 0);
+  if (target.getTime() <= from.getTime()) {
+    const tomorrow = londonDate(new Date(target.getTime() + 26 * 60 * 60 * 1000));
+    target = utcForLondonClock(tomorrow.year, tomorrow.month, tomorrow.day, hour, 0);
+  }
+  return target;
 }
 
 export function nextLondonSix(from = new Date()): Date {
-  const today = londonDate(from);
-  let target = utcForLondonClock(today.year, today.month, today.day, 6, 0);
-  if (target.getTime() <= from.getTime()) {
-    const tomorrow = londonDate(new Date(target.getTime() + 26 * 60 * 60 * 1000));
-    target = utcForLondonClock(tomorrow.year, tomorrow.month, tomorrow.day, 6, 0);
-  }
-  return target;
+  return nextLondonHour(6, from);
+}
+
+export function nextLondonFive(from = new Date()): Date {
+  return nextLondonHour(5, from);
+}
+
+/** The slot stays due for 90 minutes, so the other UTC ping the same morning does not run the work twice. */
+export function initialLondonSlot(hour: number, now = new Date()): string {
+  const today = londonDate(now);
+  const slot = utcForLondonClock(today.year, today.month, today.day, hour, 0);
+  const since = now.getTime() - slot.getTime();
+  if (since >= 0 && since <= 90 * 60 * 1000) return slot.toISOString();
+  return nextLondonHour(hour, now).toISOString();
 }
 
 function londonDate(date: Date): { year: number; month: number; day: number; hour: number; minute: number } {

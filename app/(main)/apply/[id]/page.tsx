@@ -1,10 +1,13 @@
 import Link from "next/link";
 import { ApplyActions } from "@/components/apply-actions";
 import { ApplyTabs } from "@/components/apply-tabs";
+import { MarkApplied } from "@/components/mark-applied";
 import { MissingJob } from "@/components/missing-job";
 import { PreparingLine } from "@/components/preparing-line";
 import { RefreshWhilePreparing } from "@/components/refresh-preparing";
+import { StageSelect } from "@/components/stage-select";
 import { formalLetter } from "@/lib/letter-plain";
+import { isApplicationStage } from "@/lib/stages";
 import { loadStore } from "@/lib/store";
 import type { ApplyContact, HowToApply } from "@/lib/types";
 
@@ -25,11 +28,14 @@ export default async function ApplyDetailPage({ params }: { params: Promise<{ id
   return (
     <article className="rise">
       <RefreshWhilePreparing preparing={pack.state === "preparing"} />
-      <Link href="/apply" className="eyebrow tracking-[0.12em] hover:text-[#FF6B5B]">
-        ← Apply list
+      <Link href={isApplicationStage(job.status) ? "/applied" : "/apply"} className="eyebrow tracking-[0.12em] hover:text-[#FF6B5B]">
+        ← {isApplicationStage(job.status) ? "Applied" : "To apply"}
       </Link>
       <h1 className="display mt-6 text-[clamp(36px,10vw,52px)] leading-[0.92] break-words sm:text-[clamp(56px,8vw,96px)]">{job.company}</h1>
       <div className="mt-3 text-[22px] leading-snug break-words">{job.title}</div>
+      <div className="mt-6">
+        {isApplicationStage(job.status) ? <StageSelect jobId={job.id} stage={job.status} /> : <MarkApplied jobId={job.id} goTo="/applied" />}
+      </div>
       {notice && pack.state !== "failed" ? <p className="mt-6 max-w-xl text-sm leading-6 text-[rgba(242,241,236,0.6)]">{notice}</p> : null}
       {pack.state === "preparing" ? (
         <p className="mt-10 max-w-xl overflow-hidden font-[family-name:var(--font-bricolage)] text-[28px] leading-snug font-bold" aria-busy="true" aria-live="polite">

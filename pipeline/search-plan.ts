@@ -18,6 +18,11 @@ export function rowsForLookback(hours: number): number {
   return hours >= 24 * 7 ? BACKFILL_ROWS : STEADY_ROWS;
 }
 
+/** A daily run stays on the $2 cap. The seven-day backfill is a separate, explicit choice. */
+export function steadyLookback(hours: number): number {
+  return Math.min(hours, 24 * 7 - 1);
+}
+
 export function runBudget(hours: number): { usd: number; maxItems: number } {
   const usd = hours >= 24 * 7 ? BACKFILL_MAX_USD : STEADY_MAX_USD;
   return { usd, maxItems: Math.floor((usd / ROW_USD_PER_THOUSAND) * 1000) };

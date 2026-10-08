@@ -2,7 +2,9 @@ import Link from "next/link";
 import { JobActions } from "@/components/job-actions";
 import { MissingJob } from "@/components/missing-job";
 import { PreparingLine } from "@/components/preparing-line";
+import { StageSelect } from "@/components/stage-select";
 import { listingBlocks, listingDateShort, salaryLabel } from "@/lib/format";
+import { isApplicationStage } from "@/lib/stages";
 import { loadStore } from "@/lib/store";
 
 export default async function JobPage({ params }: { params: Promise<{ id: string }> }) {
@@ -12,13 +14,14 @@ export default async function JobPage({ params }: { params: Promise<{ id: string
   if (!job) return <MissingJob />;
   const pack = store.applyPacks.find((item) => item.jobId === job.id);
   const listing = job.sources.find((source) => source.source === "linkedin") ?? job.sources[0];
-  const back = job.status === "skipped" ? "/skipped" : "/jobs";
+  const stage = isApplicationStage(job.status) ? job.status : null;
+  const back = stage ? { href: "/applied", label: "Applied" } : job.status === "skipped" ? { href: "/skipped", label: "Skipped" } : pack ? { href: "/apply", label: "To apply" } : { href: "/jobs", label: "Jobs" };
   const date = listingDateShort(job.postedAt);
   const blocks = listingBlocks(job.descriptionText);
   return (
     <article className="rise">
-      <Link href={back} className="eyebrow tracking-[0.12em] hover:text-[#FF6B5B]">
-        ← {job.status === "skipped" ? "Skipped" : "Jobs"}
+      <Link href={back.href} className="eyebrow tracking-[0.12em] hover:text-[#FF6B5B]">
+        ← {back.label}
       </Link>
       <h1 className="display mt-7 text-[clamp(36px,10vw,44px)] leading-[0.98] break-words sm:text-[clamp(44px,6vw,72px)]">{job.title}</h1>
       <div className="mt-3.5 text-[22px]">{job.company}</div>
@@ -28,10 +31,19 @@ export default async function JobPage({ params }: { params: Promise<{ id: string
         {job.demo ? " · Sample" : ""} · <span className="text-[#F2F1EC]">{salaryLabel(job)}</span>
       </div>
       <div className="mt-8 flex flex-wrap items-start gap-x-4 gap-y-3 border-b border-[#F2F1EC] pb-8 sm:items-center">
-        {pack ? (
+        {stage ? (
+          <div className="flex min-w-0 max-w-full flex-wrap items-center gap-3">
+            <StageSelect jobId={job.id} stage={stage} />
+            {pack ? (
+              <Link href={`/apply/${job.id}`} className="pill pill-line pill-sm">
+                Letter
+              </Link>
+            ) : null}
+          </div>
+        ) : pack ? (
           <div className="min-w-0 max-w-full">
             <Link href={`/apply/${job.id}`} className="pill pill-sm">
-              Open on your apply list
+              Open on To apply
             </Link>
             {pack.state === "preparing" ? (
               <p className="mt-4 max-w-xl overflow-hidden font-mono text-[11px] leading-[1.45] tracking-[0.1em] text-[rgba(242,241,236,0.7)] uppercase" aria-busy="true" aria-live="polite">

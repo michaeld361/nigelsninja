@@ -8,6 +8,7 @@ export type JobStatus =
   | "interview"
   | "offer"
   | "rejected"
+  | "withdrawn"
   | "skipped"
   | "filtered"
   | "unscored"
@@ -289,6 +290,17 @@ export type RunLock = {
   owner: string;
 } | null;
 
+export type SearchFailure = {
+  at: string;
+  message: string;
+};
+
+export type MarketNote = {
+  text: string;
+  writtenAt: string;
+  runId: string;
+};
+
 export type Store = {
   allowedUsers: AllowedUser[];
   profile: Profile;
@@ -305,6 +317,8 @@ export type Store = {
   sessions: Session[];
   magicLinks: MagicLink[];
   runLock: RunLock;
+  searchFailure: SearchFailure | null;
+  marketNote: MarketNote | null;
 };
 
 export type RawJob = {
@@ -335,4 +349,5 @@ export type SearchParams = {
   radiusMiles: number;
   lookbackHours: number;
   contractTypes: ContractType[];
+  steadyBudget?: boolean;
 };

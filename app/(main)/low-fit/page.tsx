@@ -1,20 +1,18 @@
 import Link from "next/link";
 import { PromoteJob } from "@/components/promote-job";
 import { listingDateShort, salaryLabel } from "@/lib/format";
+import { lowFitReason } from "@/lib/low-fit-reason";
 import { loadStore } from "@/lib/store";
-import type { Job } from "@/lib/types";
+import type { FitAssessment, Job, Store } from "@/lib/types";
 
 export default function LowFitPage() {
   const store = loadStore();
   const live = Boolean(process.env.APIFY_TOKEN);
   const linkedIn = (job: Job) => job.sources.some((source) => source.source === "linkedin") && (live ? !job.demo : true);
-  const scoreOf = (jobId: string) =>
-    store.fitAssessments
-      .filter((fit) => fit.jobId === jobId)
-      .sort((a, b) => b.createdAt.localeCompare(a.createdAt))[0]?.score ?? null;
+  const fitOf = (jobId: string) => latestFit(store, jobId);
   const low = store.jobs
     .filter((job) => job.status === "low_fit" && linkedIn(job))
-    .sort((a, b) => (scoreOf(b.id) ?? -1) - (scoreOf(a.id) ?? -1));
+    .sort((a, b) => (fitOf(b.id)?.score ?? -1) - (fitOf(a.id)?.score ?? -1));
   const waiting = store.jobs.filter((job) => job.status === "unscored" && linkedIn(job));
   return (
     <div className="rise">
@@ -31,26 +29,36 @@ export default function LowFitPage() {
             Nothing sitting in low fit.
           </div>
         ) : (
-          low.map((job, index) => <Row key={job.id} job={job} index={index} score={scoreOf(job.id)} />)
+          low.map((job, index) => <Row key={job.id} job={job} index={index} fit={fitOf(job.id)} />)
         )}
       </div>
       <h2 className="mt-16 font-[family-name:var(--font-bricolage)] text-[32px] font-bold tracking-[-0.02em]">Waiting to be scored</h2>
       <p className="mt-4 max-w-[52ch] text-[17px] leading-7 text-[rgba(242,241,236,0.7)]">
-        These did not fit in the last run. The next search, every two hours, picks them up first.
+        These did not fit in the last run. The next morning search picks them up first.
       </p>
       <div className="mt-8 border-t border-[rgba(242,241,236,0.12)]">
         {waiting.length === 0 ? (
           <div className="py-10 text-[rgba(242,241,236,0.5)]">Nothing waiting.</div>
         ) : (
-          waiting.map((job, index) => <Row key={job.id} job={job} index={index} score={null} />)
+          waiting.map((job, index) => <Row key={job.id} job={job} index={index} fit={null} />)
         )}
       </div>
     </div>
   );
 }
 
-function Row({ job, index, score }: { job: Job; index: number; score: number | null }) {
+function latestFit(store: Store, jobId: string): FitAssessment | null {
+  return (
+    store.fitAssessments
+      .filter((fit) => fit.jobId === jobId)
+      .sort((a, b) => b.createdAt.localeCompare(a.createdAt))[0] ?? null
+  );
+}
+
+function Row({ job, index, fit }: { job: Job; index: number; fit: FitAssessment | null }) {
   const date = listingDateShort(job.postedAt);
+  const reason = lowFitReason(fit);
+  const score = fit?.score ?? null;
   return (
     <article className="grid grid-cols-[2.75rem_minmax(0,1fr)] items-start gap-x-4 gap-y-3 border-b border-[rgba(242,241,236,0.12)] py-[30px] sm:grid-cols-[48px_minmax(0,1fr)_auto] sm:gap-5">
       <div className="pt-3 font-mono text-xs text-[rgba(242,241,236,0.45)]">{String(index + 1).padStart(2, "0")}</div>
@@ -64,6 +72,7 @@ function Row({ job, index, score }: { job: Job; index: number; score: number | n
           {date ? ` · ${date}` : ""}
           {score != null ? ` · ${score}` : ""} · <span className="text-[#F2F1EC]">{salaryLabel(job)}</span>
         </div>
+        {reason ? <p className="mt-3 max-w-[52ch] text-[15px] leading-6 text-[rgba(242,241,236,0.72)]">{reason}</p> : null}
       </div>
       <div className="col-start-2 sm:col-start-auto">
         <PromoteJob jobId={job.id} />
