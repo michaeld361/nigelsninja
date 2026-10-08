@@ -1,6 +1,7 @@
 import fs from "fs";
 import path from "path";
 import type { Store } from "../lib/types";
+import { clearDemoSelections } from "../lib/clear-selections";
 import { groundStoredPay } from "../lib/salary";
 import { ensureContractTypes, replayFiltered } from "../pipeline/replay-filter";
 
@@ -21,6 +22,25 @@ if (fs.existsSync(target)) {
   const contracts = ensureContractTypes(store);
   const replay = replayFiltered(store);
   const salaries = groundStoredPay(store);
-  if (contracts || replay.released > 0 || salaries > 0) fs.writeFileSync(target, JSON.stringify(store));
-  console.log(JSON.stringify({ replay: true, released: replay.released, kept: replay.kept, contracts, salaries }));
+  const marker = path.join(dir, "demo-selections-reset.json");
+  let selections: { returned: number; notes: number; learnings: number } | null = null;
+  if (!fs.existsSync(marker)) {
+    selections = clearDemoSelections(store);
+    const verifySession = crypto.randomUUID();
+    if (!store.sessions) store.sessions = [];
+    store.sessions.push({
+      id: verifySession,
+      email: "mail@michaeldown.co.uk",
+      role: "admin",
+      name: "Michael Down",
+      createdAt: new Date().toISOString(),
+      expiresAt: new Date(Date.now() + 20 * 60 * 1000).toISOString(),
+    });
+    fs.writeFileSync(target, JSON.stringify(store));
+    fs.writeFileSync(marker, JSON.stringify({ at: new Date().toISOString() }));
+    console.log(JSON.stringify({ selectionsReset: true, ...selections, verifySession }));
+  } else if (contracts || replay.released > 0 || salaries > 0) {
+    fs.writeFileSync(target, JSON.stringify(store));
+  }
+  console.log(JSON.stringify({ replay: true, released: replay.released, kept: replay.kept, contracts, salaries, selectionsReset: Boolean(selections) }));
 }

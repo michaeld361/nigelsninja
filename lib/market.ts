@@ -1,5 +1,5 @@
 import type { Job, Store } from "./types";
-import { formatClock, formatLongDate } from "./text";
+import { formatClock } from "./text";
 
 export type MarketPoint = {
   at: string;
@@ -48,17 +48,61 @@ export function marketView(store: Store): MarketView {
   };
 }
 
+const CHART_WIDTH = 600;
+const CHART_PAD = 20;
+
+export function chartX(index: number, count: number): number {
+  if (count <= 1) return CHART_WIDTH / 2;
+  return CHART_PAD + (index / (count - 1)) * (CHART_WIDTH - CHART_PAD * 2);
+}
+
+function londonDay(iso: string): string {
+  return new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/London", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date(iso));
+}
+
+function shortDay(iso: string): string {
+  return new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "short", timeZone: "Europe/London" }).format(new Date(iso));
+}
+
+/** A few axis labels, spaced so a short date still fits on a phone. */
+export function axisTicks(points: { at: string }[]): { index: number; label: string }[] {
+  const indexes = tickIndexes(points.length);
+  const days = indexes.map((index) => londonDay(points[index].at));
+  const moreThanOneDay = new Set(points.map((point) => londonDay(point.at))).size > 1;
+  return indexes.map((index, position) => {
+    const at = points[index].at;
+    const repeat = days.slice(0, position).includes(londonDay(at));
+    const label = points.length === 1 || (moreThanOneDay && !repeat) ? shortDay(at) : formatClock(at);
+    return { index, label };
+  });
+}
+
+function tickIndexes(count: number): number[] {
+  if (count <= 0) return [];
+  if (count === 1) return [0];
+  const x = (index: number) => chartX(index, count) / CHART_WIDTH;
+  for (const slots of [4, 3, 2]) {
+    const indexes = [...new Set(Array.from({ length: slots }, (_, slot) => Math.round((slot / (slots - 1)) * (count - 1))))];
+    const spaced = indexes.every((index, position) => position === 0 || x(index) - x(indexes[position - 1]) >= 0.22);
+    if (spaced) return indexes;
+  }
+  return [0, count - 1];
+}
+
 function chartPoints(store: Store): MarketPoint[] {
   return store.runs
     .filter((run) => run.finishedAt)
     .slice()
     .sort((a, b) => (a.finishedAt || "").localeCompare(b.finishedAt || ""))
-    .map((run) => ({
-      at: run.finishedAt || run.startedAt,
-      label: `${formatLongDate(run.finishedAt || run.startedAt).replace(/ \d{4}$/, "")}, ${formatClock(run.finishedAt || run.startedAt)}`,
-      found: run.totals.worthALook,
-      searched: run.counts.linkedin?.fetched ?? run.totals.fetched,
-    }));
+    .map((run) => {
+      const at = run.finishedAt || run.startedAt;
+      return {
+        at,
+        label: shortDay(at),
+        found: run.totals.worthALook,
+        searched: run.counts.linkedin?.fetched ?? run.totals.fetched,
+      };
+    });
 }
 
 export function historyNote(count: number): string {
