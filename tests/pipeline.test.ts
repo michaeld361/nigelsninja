@@ -323,8 +323,8 @@ test("a second run does not duplicate jobs or resurface an applied role", async 
   const linklaters = after.jobs.find((job) => job.company === "Linklaters");
   assert.ok(linklaters);
   assert.equal(linklaters.status, "low_fit");
-  const linklatersFit = after.fitAssessments.find((item) => item.jobId === linklaters.id);
-  assert.ok(linklatersFit?.blockers.some((item) => /lawyer/i.test(item)));
+  assert.equal(after.fitAssessments.some((item) => item.jobId === linklaters.id), false);
+  assert.equal(after.letters.some((item) => item.jobId === linklaters.id), false);
   const generated = after.letters.filter((letter) => letter.origin === "generated");
   assert.ok(generated.length >= 5);
   for (const letter of generated) {

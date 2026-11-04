@@ -1,13 +1,15 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { cookies } from "next/headers";
+import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { after } from "next/server";
 import mammoth from "mammoth";
 import fs from "fs";
 import path from "path";
-import { clearSessionCookie, createSession, findAllowed, getSession, sessionCookie } from "@/lib/auth";
+import { clearSessionCookie, createSharedSession, getSession, sessionCookie } from "@/lib/auth";
+import { loginAllowed, noteLoginFailure, noteLoginSuccess } from "@/lib/login-limit";
+import { passwordsMatch, sameText } from "@/lib/password";
 import { defaultSettings } from "@/lib/defaults";
 import { dataDir, emptyStore, loadStore, updateStore } from "@/lib/store";
 import type { ContractType, JobStatus, KeywordTier } from "@/lib/types";
@@ -26,52 +28,32 @@ async function actor() {
   return session;
 }
 
-export async function signInWithEmail(formData: FormData): Promise<ActionResult> {
-  const email = String(formData.get("email") || "");
-  const user = findAllowed(email);
-  if (!user) {
-    return { ok: false, message: "That email is not one this site can sign in." };
-  }
-  const token = crypto.randomUUID();
-  updateStore((store) => {
-    store.magicLinks.push({
-      token,
-      email: user.email,
-      expiresAt: new Date(Date.now() + 30 * 60 * 1000).toISOString(),
-      used: false,
-    });
-  });
-  const link = `/login/consume?token=${token}`;
-  if (!process.env.RESEND_API_KEY) return { ok: true, link };
-  const base = (process.env.APP_URL || process.env.RENDER_EXTERNAL_URL || "").replace(/\/$/, "");
-  if (!base || /127\.0\.0\.1|localhost/i.test(base)) return { ok: true, link, message: "The email was not sent." };
-  try {
-    const { sendEmail } = await import("@/pipeline/notify");
-    const { magicLinkEmail } = await import("@/pipeline/brand-email");
-    const mail = magicLinkEmail(`${base}${link}`);
-    const sent = await sendEmail(user.email, mail.subject, mail.html);
-    if (sent.sent && sent.id) return { ok: true, message: `The sign-in link is on its way to ${user.email}.` };
-    return { ok: true, link, message: sent.error || "The email was not sent." };
-  } catch {
-    return { ok: true, link, message: "The email was not sent." };
-  }
+async function clientKey(): Promise<string> {
+  const incoming = await headers();
+  const forwarded = incoming.get("x-forwarded-for")?.split(",")[0]?.trim();
+  return forwarded || incoming.get("x-real-ip") || "local";
 }
 
-export async function consumeMagicLink(token: string) {
-  const link = loadStore().magicLinks.find((item) => item.token === token && !item.used);
-  if (!link || new Date(link.expiresAt).getTime() < Date.now()) return null;
-  const user = findAllowed(link.email);
-  if (!user) return null;
-  updateStore((store) => {
-    const row = store.magicLinks.find((item) => item.token === token);
-    if (row) row.used = true;
-  });
-  const session = createSession(user.email);
-  if (!session) return null;
+export async function signInWithPassword(_previous: ActionResult | null, formData: FormData): Promise<ActionResult> {
+  const key = await clientKey();
+  if (!loginAllowed(key)) return { ok: false, message: "Too many tries. Wait fifteen minutes." };
+  const username = String(formData.get("username") || "");
+  const password = String(formData.get("password") || "");
+  const expectedUser = process.env.APP_USERNAME || "";
+  const hash = process.env.APP_PASSWORD_HASH || "";
+  if (!expectedUser || !hash) return { ok: false, message: "Sign-in is not configured." };
+  const passwordOk = passwordsMatch(password, hash);
+  const userOk = sameText(username, expectedUser);
+  if (!passwordOk || !userOk) {
+    noteLoginFailure(key);
+    return { ok: false, message: "That username or password is not right." };
+  }
+  noteLoginSuccess(key);
+  const session = createSharedSession(expectedUser);
   const jar = await cookies();
   const cookie = sessionCookie(session.id);
   jar.set(cookie.name, cookie.value, cookie.options);
-  return session;
+  redirect("/jobs");
 }
 
 export async function signOut() {
@@ -127,8 +109,6 @@ export async function setJobStatus(jobId: string, status: JobStatus): Promise<Ac
   revalidatePath("/today");
   revalidatePath("/pipeline");
   revalidatePath("/jobs");
-  revalidatePath("/low-fit");
-  revalidatePath("/filtered");
   revalidatePath(`/jobs/${jobId}`);
   return { ok: true };
 }
@@ -585,9 +565,8 @@ export async function skipJob(jobId: string): Promise<ActionResult> {
   });
   if (missing) return { ok: false, message: "That role is not in the queue." };
   revalidatePath("/jobs");
-  revalidatePath("/skipped");
   revalidatePath(`/jobs/${jobId}`);
-  redirect("/skipped");
+  redirect("/jobs");
 }
 
 export async function addToApplyList(jobId: string): Promise<ActionResult> {

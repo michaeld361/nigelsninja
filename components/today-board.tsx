@@ -14,14 +14,12 @@ export function TodayBoard({
   summary,
   sample,
   fresh,
-  lowFit,
 }: {
   summary: string;
   sample: boolean;
   fresh: TodayCard[];
-  lowFit: TodayCard[];
 }) {
-  const cards = [...fresh, ...lowFit];
+  const cards = fresh;
   const [index, setIndex] = useState(0);
   const router = useRouter();
   const [pending, start] = useTransition();
@@ -67,7 +65,7 @@ export function TodayBoard({
       ) : null}
       {fresh.length === 0 ? (
         <div className="rounded-2xl border border-dashed px-4 py-10 text-sm text-muted-foreground">
-          {summary} Nothing new is waiting above the fit line. Low fit and filtered roles are kept off this list until you open them.
+          {summary} Nothing new is waiting.
         </div>
       ) : (
         <ul className="space-y-3">
@@ -78,20 +76,6 @@ export function TodayBoard({
           ))}
         </ul>
       )}
-      <section className="space-y-3">
-        <h2 className="text-sm font-medium">Low fit</h2>
-        {lowFit.length === 0 ? (
-          <p className="text-sm text-muted-foreground">No low fit roles from the latest run.</p>
-        ) : (
-          <ul className="space-y-3">
-            {lowFit.map((card) => (
-              <li key={card.id}>
-                <JobCard card={card} active={false} pending={pending} onAct={act} />
-              </li>
-            ))}
-          </ul>
-        )}
-      </section>
     </div>
   );
 }

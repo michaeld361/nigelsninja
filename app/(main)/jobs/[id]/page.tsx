@@ -16,7 +16,7 @@ export default async function JobPage({ params }: { params: Promise<{ id: string
   const pack = store.applyPacks.find((item) => item.jobId === job.id);
   const listing = job.sources.find((source) => source.source === "linkedin") ?? job.sources[0];
   const stage = isApplicationStage(job.status) ? job.status : null;
-  const back = stage ? { href: "/applied", label: "Applied" } : job.status === "skipped" ? { href: "/skipped", label: "Skipped" } : pack ? { href: "/apply", label: "To apply" } : { href: "/jobs", label: "Jobs" };
+  const back = stage ? { href: "/applied", label: "Applied" } : pack ? { href: "/apply", label: "To apply" } : { href: "/jobs", label: "Jobs" };
   const date = listingDateShort(job.postedAt);
   const pay = salaryLabel(job);
   const blocks = listingBlocks(job.descriptionText);

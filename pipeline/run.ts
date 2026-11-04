@@ -1,7 +1,6 @@
 import { redactSecrets } from "@/lib/cron-auth";
 import { RUN_LOCK_MS } from "@/lib/cron-wait";
 import { RUN_CAPS } from "@/lib/defaults";
-import { lowFitReason } from "@/lib/low-fit-reason";
 import { loadStore, updateStore } from "@/lib/store";
 import { statedContract } from "@/lib/text";
 import type { FitAssessment, Job, Letter, Run, Settings, SourceId, Store } from "@/lib/types";
@@ -12,7 +11,7 @@ import { normaliseRaw } from "./normalise";
 import { buildDigest, sendEmail } from "./notify";
 import { PRACTISING_QUALIFICATION, prefilterJob } from "./prefilter";
 import { applyRetention, expireListings } from "./retention";
-import { scoreJob, type ScoreResult } from "./score";
+import { scoreJob, scoreLocal, worthShowing, type ScoreResult } from "./score";
 import { searchJSearch } from "./sources/jsearch";
 import { searchLinkedIn } from "./sources/linkedin";
 import { searchReed } from "./sources/reed";
@@ -110,7 +109,7 @@ export async function runPipeline(options: {
     const skipLettersReason = ceilingHit ? "Monthly spend ceiling reached. Scoring continued and letters were skipped." : null;
 
     const sourceMerges: { dedupeKey: string; url: string; source: Job["sources"][number] }[] = [];
-    const backlogScored: { id: string; status: Job["status"]; fit: ScoreResult; letter?: Letter }[] = [];
+    const backlogScored: { id: string; status: Job["status"]; fit?: ScoreResult; letter?: Letter }[] = [];
 
     const candidates: { result: SourceResult; rawIndex: number }[] = [];
     for (const result of results) {
@@ -131,21 +130,20 @@ export async function runPipeline(options: {
     console.log(JSON.stringify({ event: "pipeline-score", candidates: candidates.length, lookbackHours }));
     const profile = profileBlock(snapshot);
     const weighing = weighingText(snapshot.notes, snapshot.learnings);
-    const waitingForScore = snapshot.jobs.filter((job) => {
-      if (job.status === "unscored") return true;
-      if (job.status !== "low_fit") return false;
-      const fit = snapshot.fitAssessments
-        .filter((item) => item.jobId === job.id)
-        .sort((a, b) => b.createdAt.localeCompare(a.createdAt))[0];
-      return !lowFitReason(fit);
-    });
+    const waitingForScore = snapshot.jobs.filter((job) => job.status === "unscored");
     for (const waiting of waitingForScore) {
+      const local = scoreLocal(scoreInput(waiting), snapshot.settings);
+      if (!worthShowing(local, snapshot.settings.scoreThreshold)) {
+        backlogScored.push({ id: waiting.id, status: "low_fit" });
+        waiting.status = "low_fit";
+        continue;
+      }
       if (scored >= RUN_CAPS.scored) break;
       const fit = await scoreJob(scoreInput(waiting), snapshot.settings, profile, weighing);
       scored += 1;
-      const status = fit.score >= snapshot.settings.scoreThreshold && !fit.blockers.length ? "new" : "low_fit";
+      const status = worthShowing(fit, snapshot.settings.scoreThreshold) ? "new" : "low_fit";
       const letter = status === "new" ? await maybeLetter(waiting, fit) : undefined;
-      backlogScored.push({ id: waiting.id, status, fit, letter });
+      backlogScored.push({ id: waiting.id, status, fit: status === "new" ? fit : undefined, letter });
       waiting.status = status;
       counts.linkedin.scored += 1;
     }
@@ -248,6 +246,14 @@ export async function runPipeline(options: {
         planned.push({ job, raw: { source: raw.source, externalId: raw.externalId, payload: raw } });
         continue;
       }
+      const local = scoreLocal(scoreInput(job), snapshot.settings);
+      if (!worthShowing(local, snapshot.settings.scoreThreshold)) {
+        job.status = "low_fit";
+        job.filteredReason = null;
+        counts[raw.source].new += 1;
+        planned.push({ job, raw: { source: raw.source, externalId: raw.externalId, payload: raw } });
+        continue;
+      }
       if (scored >= RUN_CAPS.scored) {
         job.status = "unscored";
         job.filteredReason = null;
@@ -257,12 +263,16 @@ export async function runPipeline(options: {
       const fit = await scoreJob(scoreInput(job), snapshot.settings, profile, weighing);
       scored += 1;
       counts[raw.source].scored += 1;
-      job.status = fit.score >= snapshot.settings.scoreThreshold && !fit.blockers.length ? "new" : "low_fit";
-      if (fit.blockers.length && fit.score >= snapshot.settings.scoreThreshold) job.status = "low_fit";
+      job.status = worthShowing(fit, snapshot.settings.scoreThreshold) ? "new" : "low_fit";
       const letter = job.status === "new" ? await maybeLetter(job, fit) : undefined;
       if (letter) counts[raw.source].letters += 1;
       counts[raw.source].new += 1;
-      planned.push({ job, fit, letter, raw: { source: raw.source, externalId: raw.externalId, payload: raw } });
+      planned.push({
+        job,
+        fit: job.status === "new" ? fit : undefined,
+        letter: job.status === "new" ? letter : undefined,
+        raw: { source: raw.source, externalId: raw.externalId, payload: raw },
+      });
     }
 
     if (planned.some((item) => item.job.status === "unscored") || snapshot.jobs.some((job) => job.status === "unscored")) {
@@ -311,22 +321,24 @@ export async function runPipeline(options: {
         job.status = update.status;
         job.filteredReason = null;
         job.statusChangedAt = finished.toISOString();
-        store.fitAssessments.push({
-          id: `fit-${job.id}-${finished.getTime()}`,
-          jobId: job.id,
-          model: update.fit.model,
-          promptVersion: update.fit.promptVersion,
-          score: update.fit.score,
-          summary: update.fit.summary,
-          matches: update.fit.matches,
-          gaps: update.fit.gaps,
-          blockers: update.fit.blockers,
-          flags: update.fit.flags,
-          seniorityFit: update.fit.seniorityFit,
-          locationFit: update.fit.locationFit,
-          salaryNote: update.fit.salaryNote,
-          createdAt: finished.toISOString(),
-        });
+        if (update.fit && update.status === "new") {
+          store.fitAssessments.push({
+            id: `fit-${job.id}-${finished.getTime()}`,
+            jobId: job.id,
+            model: update.fit.model,
+            promptVersion: update.fit.promptVersion,
+            score: update.fit.score,
+            summary: update.fit.summary,
+            matches: update.fit.matches,
+            gaps: update.fit.gaps,
+            blockers: update.fit.blockers,
+            flags: update.fit.flags,
+            seniorityFit: update.fit.seniorityFit,
+            locationFit: update.fit.locationFit,
+            salaryNote: update.fit.salaryNote,
+            createdAt: finished.toISOString(),
+          });
+        }
         if (update.letter) store.letters.push(update.letter);
         store.statusEvents.push({
           id: `event-backlog-${job.id}-${finished.getTime()}`,

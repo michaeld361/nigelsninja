@@ -218,7 +218,6 @@ function Spec({ job, fit }: { job: Job; fit: FitAssessment | null }) {
           </a>
         ))}
       </div>
-      {job.filteredReason ? <p className="text-sm text-muted-foreground">Filtered: {job.filteredReason}</p> : null}
       <article className="whitespace-pre-wrap text-sm leading-6">{job.descriptionText}</article>
       {fit ? (
         <div className="hidden md:block">
@@ -272,7 +271,7 @@ function LetterPanel(props: {
   if (!props.latest) {
     return (
       <div className="rounded-2xl border border-dashed p-4 text-sm">
-        <p>No letter yet. Low fit roles wait until you ask.</p>
+        <p>No letter yet.</p>
         <Button className="mt-3" disabled={props.pending} onClick={props.onRegenerate}>
           {props.pending ? "Drafting…" : "Request a letter"}
         </Button>

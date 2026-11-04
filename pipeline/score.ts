@@ -253,6 +253,10 @@ export function scoreUser(profileText: string, input: unknown, local: unknown, w
   return appendWeighing(user, weighing);
 }
 
+export function worthShowing(result: Pick<ScoreResult, "score" | "blockers">, threshold: number): boolean {
+  return result.score >= threshold && result.blockers.length === 0;
+}
+
 export async function scoreJob(input: ScoreInput, settings: Settings, profileText: string, weighing = ""): Promise<ScoreResult> {
   const local = scoreLocal(input, settings);
   if (!process.env.ANTHROPIC_API_KEY) return local;

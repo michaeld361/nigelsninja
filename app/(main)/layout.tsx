@@ -21,9 +21,8 @@ export default async function MainLayout({ children }: { children: React.ReactNo
     return Boolean(job && visible(job) && !isApplicationStage(job.status));
   }).length;
   const applied = store.jobs.filter((job) => isApplicationStage(job.status) && visible(job)).length;
-  const skipped = store.jobs.filter((job) => job.status === "skipped" && visible(job)).length;
   return (
-    <Shell name={session.name} role={session.role} counts={{ jobs: jobs.length, apply, applied, skipped, market: searches }}>
+    <Shell name={session.name} role={session.role} counts={{ jobs: jobs.length, apply, applied, market: searches }}>
       {children}
     </Shell>
   );

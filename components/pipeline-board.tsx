@@ -112,7 +112,6 @@ export function PipelineBoard({ cards }: { cards: TodayCard[] }) {
                     {[card.company, card.location, card.salary].filter(Boolean).join(" · ")}
                     {card.score != null ? ` · ${card.score}` : ""}
                   </span>
-                  {card.filteredReason ? <span className="mt-1 block text-xs text-muted-foreground">{card.filteredReason}</span> : null}
                 </span>
               </label>
               <span className="flex flex-wrap items-center gap-2">

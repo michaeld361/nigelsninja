@@ -54,6 +54,21 @@ export function findAllowed(email: string) {
   return loadStore().allowedUsers.find((user) => user.email.toLowerCase() === normalised) ?? null;
 }
 
+export function createSharedSession(username: string) {
+  const session: Session = {
+    id: crypto.randomUUID(),
+    email: username,
+    role: "admin",
+    name: "Nigel Down",
+    createdAt: new Date().toISOString(),
+    expiresAt: new Date(Date.now() + THIRTY_DAYS * 1000).toISOString(),
+  };
+  updateStore((store) => {
+    store.sessions.push(session);
+  });
+  return session;
+}
+
 export function createSession(email: string) {
   const user = findAllowed(email);
   if (!user) return null;
